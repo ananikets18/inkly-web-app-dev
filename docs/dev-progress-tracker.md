@@ -92,4 +92,11 @@
 
 ---
 
+## 23-06-2025 Sprint
+- Worked with inkly UI
+- Removed modal 
+- Removed the signed in state
+- Added the annymous state
+
+
 > 📌 Track your sprint every 3 days. Move tasks across your GitHub Project board and update this file accordingly.
