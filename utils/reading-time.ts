@@ -1,5 +1,4 @@
 export function calculateReadingTime(text: string): { minutes: number; seconds: number; text: string } {
-  // Average reading speed is 200-250 words per minute, we'll use 225
   const readingWordsPerMinute = 225
   const words = text.trim().split(/\s+/).length
   const totalMinutes = words / readingWordsPerMinute
