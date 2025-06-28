@@ -1,212 +1,257 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Header from "../components/Header"
-import SideNav from "../components/SideNav"
-import BottomNav from "../components/BottomNav"
-import InkCard from "../components/InkCard"
+import { useState, useEffect } from "react";
+import Header from "../components/Header";
+import SideNav from "../components/SideNav";
+import BottomNav from "../components/BottomNav";
+import ResponsiveInkCard from "../components/ResponsiveInkCard";
+import { useSoundEffects } from "../hooks/use-sound-effects";
+import { calculateReadingTime } from "../utils/reading-time";
+import { reactions } from "../components/reaction-button";
+import Masonry from "react-masonry-css";
+import { debounce } from "lodash";  
+import SkeletonCard from "@/components/SkeletonCard";  
+import { useFeedContext } from "../hooks/feed-context";
+import FeedLoader from "../components/FeedLoader";
 
+// FUTURE INTEGRATION NOTE:
+// To fetch real API data for the feed, use SWR (https://swr.vercel.app/) or React Query (https://tanstack.com/query/latest).
+// 1. Replace the sampleContents/authorNames arrays with a fetcher function that calls your backend API.
+// 2. Use the SWR or useQuery hook to fetch and cache data.
+// 3. The batching and state persistence logic will work seamlessly with paginated API data.
+// Example (SWR):
+//   const { data, isLoading } = useSWR('/api/feed?page=1', fetcher)
+// Example (React Query):
+//   const { data, isLoading } = useQuery(['feed', page], () => fetchFeed(page))
+// See documentation for advanced features like infinite scroll, caching, and optimistic updates.
 
+const masonryBreakpoints = {
+  default: 5,     // ≥1536px
+  1536: 4,        // ≥1280px and <1536px
+  1280: 3,        // ≥1024px and <1280px
+  1024: 2,        // ≥768px and <1024px
+  768: 1,         // <768px (mobile only)
+};
 
-import {
-  Search,
-  Home,
-  Zap,
-  Heart,
-  Bookmark,
-  TrendingUp,
-  Users,
-  PenLine,
-  Plus,
-  Settings,
-  Share2,
-  Eye,
-  Volume2,
-  VolumeX,
-  Clock,
-} from "lucide-react"
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { reactions } from "../components/reaction-button"
-import { useSoundEffects } from "../hooks/use-sound-effects"
-import { calculateReadingTime } from "../utils/reading-time"
-
-const sampleContents = [
-  "The moonlight danced on the edges of her soul, illuminating corners even she had forgotten.",
-  "I am the storm I've been waiting for.",
-  "Whisper to the universe what you seek and it shall echo back tenfold.",
-  "A silent affirmation each morning shaped her every decision.",
-  "'We meet again,' said destiny as she chose her path yet again.",
-  "Hope was not a bird, but a fire quietly kept alive beneath her ribs.",
-  "If pain is the price of growth, she was ready to bloom.",
-  "These lines hold more truth than silence ever could.",
-  "Manifest with intention. Trust the magic in your breath.",
-  "Some stories aren't written. They're felt.",
-  "I have often regretted my speech, never my silence.",
-  "Every time your heart is broken, a doorway cracks open to a world full of new beginnings, new opportunities.",
-  "She stood there, watching the world rush by, holding a quiet storm within her chest that neither asked to be seen nor feared to be known. Her eyes weren't just windows to her soul—they were kaleidoscopes of broken mirrors, reflecting every truth she never dared to speak aloud. In the silence of her solitude, she built kingdoms of resilience, wrapped in poetry only she could read.",
-  "Every inhale carried a story, and every exhale was a release. Her mind was an ocean of metaphors—waves of unspoken words, thoughts crashing and forming verses in her bones. At midnight, she didn't sleep. She bled ink, inscribing dreams onto the fabric of her pillowcases, where no one but the stars bore witness.",
-  "Pain taught her the alphabet of strength. From A for ache to Z for zen, she mastered her narrative. Each scar etched on her heart was a stanza, and each tear, punctuation. When she walked, she carried libraries within her, volumes waiting to be unlocked, one glance at a time.",
-  "She wasn't soft because life was easy. She was soft like the sea—calm on the surface but carrying storms in the deep. Poetry didn't come from peace. It was born from her chaos, fed by her resilience, and shaped by every dawn she decided to rise again.",
-]
-
-const authorNames = ["Maya Chen", "Alex Rivera", "Jordan Kim", "Sam Taylor", "Riley Park"]
-
-function truncate(text: string, maxLength: number) {
-  return text.length <= maxLength ? text : text.slice(0, maxLength) + "..."
-}
+const INITIAL_COUNT = 8;
+const CARD_LIMIT = 80;
+const BATCH_SIZE = 2; // Number of cards to add per batch
+const BATCH_DELAY = 80; // ms delay between batches
 
 export default function HomePage() {
-  const router = useRouter()
-  const [visibleCount, setVisibleCount] = useState(20)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [postReactions, setPostReactions] = useState<{ [key: number]: { reaction: string; count: number } }>({})
-  const [scrollDistance, setScrollDistance] = useState(0)
-  const [hasScrolledEnough, setHasScrolledEnough] = useState(false)
+  const { visibleCount, setVisibleCount, scrollY, setScrollY, hasVisited, setHasVisited } = useFeedContext();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [postReactions, setPostReactions] = useState<{ [key: number]: { reaction: string; count: number } }>({});
+  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-
-
-
-  const { playSound, isMuted, isInitialized, toggleMute } = useSoundEffects()
-
-  const handleButtonClick = (soundType: "click" | "like" | "follow" | "bookmark") => {
-    playSound(soundType)
-  }
-
-  const handleButtonHover = () => {
-    playSound("hover")
-  }
-
-// const handleReaction = (postId: number, reactionId: string) => {
-//   const selected = reactions.find((r) => r.id === reactionId)
-//   if (selected) {
-//     setBurstEmoji(<selected.icon />)
-//     setBurstKey(Date.now().toString()) // triggers overlay reset
-//   }
-
-//   setPostReactions((prev) => ({
-//     ...prev,
-//     [postId]: {
-//       reaction: reactionId,
-//       count: (prev[postId]?.count || 0) + 1,
-//     },
-//   }))
-// }
-const handleReaction = (postId: number, reactionId: string) => {
-  const selected = reactions.find((r) => r.id === reactionId)
-  if (selected) {
-    setPostReactions((prev) => ({
-      ...prev,
-      [postId]: {
-        reaction: reactionId,
-        count: (prev[postId]?.count || 0) + 1,
-      },
-    }))
-    // handleReact(reactionId) // Trigger burst!
-  }
-}
-
-
-  const handleInkClick = (inkId: number) => {
-    playSound("click")
-    router.push(`/ink/${inkId}`)
-  }
-
-  // Track scroll distance and show new inks notification after significant scrolling
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY
-      setScrollDistance(currentScrollY)
+    window.scrollTo(0, scrollY);
+    setMounted(true);
+    if (!hasVisited) setHasVisited(true);
+    return () => {
+      setScrollY(window.scrollY);
+    };
+  }, []);
 
-      //- *Future* Show new inks notification after scrolling at least 2000px (significant engagement)
- 
+  const { playSound } = useSoundEffects();
 
-      // Infinite scroll logic
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300 && !isLoadingMore) {
-        setIsLoadingMore(true)
-        setTimeout(() => {
-          setVisibleCount((prev) => prev + 10)
-          setIsLoadingMore(false)
-        }, 1000)
+  const sampleContents = [
+    // Large Poem Demo
+    `Beneath the silver whisper of the moon,
+A thousand dreams awaken, drift, and swoon.
+The city sleeps, but in the quiet deep,
+A poet's heart is far too wild to sleep.
+
+She pens the ache of longing in the night,
+Each stanza trembling, searching for the light.
+Her verses spill like rivers on the page—
+A gentle storm, a captive bird uncaged.
+
+The world may never know the words she weaves,
+The secret hopes she tucks beneath her sleeves.
+But in the hush, her ink becomes the sea—
+Endless, wild, and beautifully free.`,
+    // Poems
+    "The moonlight danced on the edges of her soul, illuminating corners even she had forgotten.",
+    "Hope was not a bird, but a fire quietly kept alive beneath her ribs.",
+    // Dialogues
+    "\"Are you coming?\" she asked. He smiled, 'Always.'",
+    "'Promise me you'll stay.' 'Until the stars forget to shine.'",
+    // Quotes
+    "Whisper to the universe what you seek and it shall echo back tenfold.",
+    "Every time your heart is broken, a doorway cracks open to a world full of new beginnings.",
+    // Affirmations
+    "A silent affirmation each morning shaped her every decision.",
+    "Manifest with intention. Trust the magic in your breath.",
+    // Dank tales
+    "Once upon a meme, a frog ruled the internet.",
+    "In a world of cats, be a keyboard warrior.",
+    // Confessions
+    "Confession: I still believe in magic.",
+    "Sometimes I pretend to be busy just to avoid people.",
+    // Facts
+    "Did you know? Honey never spoils. Archaeologists have found edible honey in ancient tombs.",
+    "Octopuses have three hearts and blue blood.",
+    // Other
+    "She wasn't soft because life was easy. She was soft like the sea—calm on the surface but carrying storms in the deep.",
+    "Some stories aren't written. They're felt.",
+  ];
+
+  const authorNames = [
+    "sarah_mitchell",   // Creator badge
+    "Maya Chen",        // Regular user
+    "alex_thompson",    // Admin badge
+    "Jordan Kim",       // Regular user
+    "mike_rodriguez",   // Moderator badge
+    "Sam Taylor",       // Regular user
+    "emma_wilson",      // Contributor badge
+    "Riley Park",       // Regular user
+    "david_chen",       // Writer badge
+    "Alex Rivera",      // Regular user
+    "lisa_park",        // Author badge
+    "jessica_brown",    // Verified tick only
+    "michael_lee"       // Verified tick only
+  ];
+  const avatarColors = [
+    "from-purple-500 to-pink-500",
+    "from-blue-500 to-cyan-500",
+    "from-green-500 to-teal-500",
+    "from-orange-500 to-red-500",
+    "from-indigo-500 to-purple-500",
+    "from-pink-500 to-rose-500",
+    "from-yellow-500 to-orange-500",
+    "from-emerald-500 to-green-500",
+    "from-violet-500 to-purple-500",
+    "from-sky-500 to-blue-500",
+    "from-amber-500 to-yellow-500",
+    "from-cyan-500 to-blue-500",
+    "from-rose-500 to-pink-500"
+  ];
+
+  const handleButtonClick = (type: "click" | "like" | "follow" | "bookmark") => playSound(type);
+  const handleButtonHover = () => playSound("hover");
+
+  const handleReaction = (postId: number, reactionId: string | null) => {
+    if (!reactionId) return;
+    const selected = reactions.find((r) => r.id === reactionId);
+    if (selected) {
+      setPostReactions((prev) => ({
+        ...prev,
+        [postId]: {
+          reaction: reactionId,
+          count: (prev[postId]?.count || 0) + 1,
+        },
+      }));
+    }
+  };
+
+  // Batching function for loading more cards
+  const batchAddCards = (totalToAdd: number) => {
+    let added = 0;
+    function addBatch() {
+      setVisibleCount((prev) => {
+        const next = Math.min(prev + BATCH_SIZE, prev + (totalToAdd - added), prev + CARD_LIMIT);
+        added += BATCH_SIZE;
+        return next;
+      });
+      added += BATCH_SIZE;
+      if (added < totalToAdd) {
+        setTimeout(addBatch, BATCH_DELAY);
+      } else {
+        setIsLoadingMore(false);
       }
     }
+    addBatch();
+  };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [isLoadingMore, hasScrolledEnough])
-
-
+  useEffect(() => {
+    const handleScroll = debounce(() => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300 && !isLoadingMore) {
+        setIsLoadingMore(true);
+        // Use batching instead of single setTimeout
+        batchAddCards(10);
+      }
+    }, 100);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isLoadingMore]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Header */}
-  
-    <Header />
+      <Header />
       <div className="flex sm:flex-row flex-col">
-       <SideNav />
-        <main className="flex-1 px-4 py-6 relative isolate z-0">
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-            {Array.from({ length: visibleCount }).map((_, idx) => {
-                const content = sampleContents[idx % sampleContents.length]
-                const author = authorNames[idx % authorNames.length]
-                const isLong = idx % 3 === 0
-                const displayContent = isLong ? content.repeat(2) : content
-                const postReaction = postReactions[idx]
-                const readingTime = calculateReadingTime(displayContent)
-
-                const avatarColors = [
-                  "from-purple-500 to-pink-500",
-                  "from-blue-500 to-cyan-500",
-                  "from-green-500 to-teal-500",
-                  "from-orange-500 to-red-500",
-                  "from-indigo-500 to-purple-500",
-                ]
-                const avatarColor = avatarColors[idx % avatarColors.length]
-
-                return (
-                  <InkCard
-                    key={idx}
-                    id={idx}
-                    content={displayContent}
-                    author={author}
-                    avatarColor={avatarColor}
-                    isLong={isLong}
-                    reaction={postReaction}
-                    readingTime={readingTime}
-                    onClick={() => handleInkClick(idx)}
-                    onHover={handleButtonHover}
-                    onReact={(reactionId) => handleReaction(idx, reactionId)}
-                    onBookmark={() => handleButtonClick("bookmark")}
-                    onShare={() => handleButtonClick("click")}
-                    onFollow={() => handleButtonClick("follow")} shareUrl={""}                  />
-                )
-              })}
-
-            {isLoadingMore &&
-              Array.from({ length: 4 }).map((_, idx) => (
-                <div
-                  key={`skeleton-${idx}`}
-                  className="animate-pulse break-inside-avoid rounded-xl border border-gray-200 bg-white p-4 shadow-sm mb-4"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                    <div className="flex-1">
-                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-                      <div className="h-2 bg-gray-200 rounded w-1/3"></div>
-                    </div>
-                  </div>
-                  <div className="h-24 bg-gray-100 rounded mb-3"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/3 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-                </div>
+        <SideNav />
+        <main className="flex-1 px-2 sm:px-4 py-6" role="main">
+          {isLoading && <FeedLoader message="Loading feed..." />}
+          {!mounted ? (
+            <Masonry
+              breakpointCols={masonryBreakpoints}
+              className="my-masonry-grid"
+              columnClassName="my-masonry-grid_column"
+            >
+              {Array.from({ length: INITIAL_COUNT }).map((_, idx) => (
+                <SkeletonCard key={idx} />
               ))}
-          </div>
+            </Masonry>
+          ) : (
+            <Masonry
+              breakpointCols={masonryBreakpoints}
+              className="my-masonry-grid"
+              columnClassName="my-masonry-grid_column"
+            >
+              {Array.from({ length: visibleCount })
+                .slice(Math.max(0, visibleCount - CARD_LIMIT))
+                .map((_, idx) => {
+                  const realIdx = Math.max(0, visibleCount - CARD_LIMIT) + idx;
+                  const content = sampleContents[realIdx % sampleContents.length];
+                  const author = authorNames[realIdx % authorNames.length];
+                  const isLong = realIdx === 0;
+                  const displayContent = isLong ? content.repeat(2) : content;
+                  const postReaction = postReactions[realIdx];
+                  const readingTime = calculateReadingTime(displayContent);
+                  const avatarColor = avatarColors[realIdx % avatarColors.length];
+                  return (
+                    <ResponsiveInkCard
+                      key={realIdx}
+                      id={realIdx}
+                      content={displayContent}
+                      author={author}
+                      avatarColor={avatarColor}
+                      isLong={isLong}
+                      reaction={postReaction}
+                      readingTime={readingTime}
+                      onHover={handleButtonHover}
+                      onReact={(reactionId) => handleReaction(realIdx, reactionId)}
+                      onBookmark={() => handleButtonClick("bookmark")}
+                      onShare={() => handleButtonClick("click")}
+                      onFollow={() => handleButtonClick("follow")}
+                      shareUrl={""}
+                      bookmarkCount={0}
+                      views={0}
+                      reactionCount={0}
+                      reflectionCount={0}
+                      echoCount={0}
+                      onClick={() => console.log("open modal")}
+                    />
+                  );
+                })}
+              {isLoadingMore && (
+                <>
+                  <div className="flex flex-col items-center justify-center py-6 w-full col-span-full">
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500 mb-2" />
+                    <span className="text-sm text-gray-500 font-medium">Loading more...</span>
+                  </div>
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <SkeletonCard key={`skeleton-more-${idx}`} />
+                  ))}
+                </>
+              )}
+            </Masonry>
+          )}
         </main>
       </div>
-    <BottomNav />
+      <BottomNav />
     </div>
-  )
+  );
 }

@@ -2,8 +2,9 @@ import type React from "react";
 import type { Metadata } from "next";
 import "./globals.css";
 import { GeistSans } from 'geist/font/sans';
-
-
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { FeedProvider } from "../hooks/feed-context";
+import ClientRoot from "../components/ClientRoot";
 
 export const metadata: Metadata = {
   title: "Inkly - A Place",
@@ -18,7 +19,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={GeistSans.className}>{children}</body>
+      <body className={GeistSans.className}>
+        <ClientRoot>
+          <FeedProvider>
+            <TooltipProvider>
+              {/*
+                For best UX, keep transitions and animations local to each page/component.
+                If you want to reintroduce subtle, non-blocking transitions globally, wrap children in a lightweight transition component here.
+                Example: <motion.div>{children}</motion.div> with a very short fade, but avoid blocking navigation or double-animating.
+              */}
+              {children}
+            </TooltipProvider>
+          </FeedProvider>
+        </ClientRoot>
+      </body>
     </html>
   );
 }
