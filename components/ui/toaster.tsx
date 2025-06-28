@@ -17,7 +17,11 @@ export function Toaster() {
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast key={id} {...props}>
+          <Toast 
+          key={id} 
+          {...props}
+          className="transition-all duration-300 animate-in slide-in-from-top fade-in"
+          >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
@@ -29,7 +33,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className="fixed top-4 right-4 z-[9999] w-[320px] max-w-full outline-none"  />
     </ToastProvider>
   )
 }
