@@ -2,24 +2,74 @@
 
 import { useCallback, useRef, useEffect, useState } from "react"
 
-type SoundType = "click" | "hover" | "like" | "modalOpen" | "modalClose" | "follow" | "bookmark"
+type SoundType = "click" | "hover" | "like" | "modalOpen" | "modalClose" | "follow" | "bookmark" | "hashtagHover" | "inkify" | "reflection" | "notification" | "share" | "error" | "success"
 
 export function useSoundEffects() {
   const audioContextRef = useRef<AudioContext | null>(null)
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({})
   const [isMuted, setIsMuted] = useState(false)
   const [isEnabled, setIsEnabled] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isAudioContextResumed, setIsAudioContextResumed] = useState(false)
 
-  // Initialize audio context
+  // Resume audio context on first user interaction
+  const resumeAudioContext = useCallback(async () => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume()
+        setIsAudioContextResumed(true)
+      } catch (error) {
+        console.warn("Failed to resume audio context:", error)
+      }
+    }
+  }, [])
+
+  // Initialize audio context and preload audio files
   useEffect(() => {
+    // --- AUDIO SYSTEM WARM-UP FOR INSTANT FEEDBACK ---
     const initAudioContext = () => {
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
         setIsInitialized(true)
+        // Check if audio context is suspended and needs to be resumed
+        if (audioContextRef.current.state === 'suspended') {
+          setIsAudioContextResumed(false)
+        } else {
+          setIsAudioContextResumed(true)
+        }
       } catch (error) {
         console.warn("Web Audio API not supported")
         setIsInitialized(false)
       }
+    }
+
+    // Preload audio files
+    const audioFiles: Record<string, string> = {
+      notification: '/sound/notification.wav',
+      success: '/sound/success.mp3',
+      share: '/sound/share_blip.mp3',
+    }
+
+    Object.entries(audioFiles).forEach(([key, path]) => {
+      const audio = new Audio(path)
+      audio.preload = 'auto'
+      audioRefs.current[key] = audio
+    })
+
+    // Resume AudioContext and play a silent sound to warm up the system
+    initAudioContext()
+    if (audioContextRef.current) {
+      resumeAudioContext().then(() => {
+        // Play a silent sound to reduce first-play latency
+        const ctx = audioContextRef.current!
+        const oscillator = ctx.createOscillator()
+        const gainNode = ctx.createGain()
+        oscillator.connect(gainNode)
+        gainNode.connect(ctx.destination)
+        gainNode.gain.value = 0.0001
+        oscillator.start()
+        oscillator.stop(ctx.currentTime + 0.05)
+      })
     }
 
     // Check user preferences
@@ -33,28 +83,73 @@ export function useSoundEffects() {
       setIsMuted(JSON.parse(savedMutePreference))
     }
 
-    // Initialize on first user interaction
-    const handleFirstInteraction = () => {
+    // Also keep first interaction fallback for browsers that require it
+    const handleFirstInteraction = async () => {
       if (!isInitialized) {
         initAudioContext()
       }
+      await resumeAudioContext()
       document.removeEventListener("click", handleFirstInteraction)
       document.removeEventListener("touchstart", handleFirstInteraction)
+      document.removeEventListener("keydown", handleFirstInteraction)
     }
 
     document.addEventListener("click", handleFirstInteraction)
     document.addEventListener("touchstart", handleFirstInteraction)
+    document.addEventListener("keydown", handleFirstInteraction)
 
     return () => {
       document.removeEventListener("click", handleFirstInteraction)
       document.removeEventListener("touchstart", handleFirstInteraction)
+      document.removeEventListener("keydown", handleFirstInteraction)
     }
-  }, [isInitialized])
+  }, [isInitialized, resumeAudioContext])
+
+  // Lazy-load audio files only when needed
+  const loadAudioFile = useCallback((audioKey: string, path: string) => {
+    if (!audioRefs.current[audioKey]) {
+      const audio = new Audio(path);
+      audio.preload = 'auto';
+      audioRefs.current[audioKey] = audio;
+    }
+  }, []);
+
+  // Play audio file
+  const playAudioFile = useCallback((audioKey: string) => {
+    if (!isEnabled || isMuted) return;
+    const audioFiles: Record<string, string> = {
+      notification: '/sound/notification.wav',
+      success: '/sound/success.mp3',
+      share: '/sound/share_blip.mp3',
+    };
+    if (!audioRefs.current[audioKey] && audioFiles[audioKey]) {
+      loadAudioFile(audioKey, audioFiles[audioKey]);
+    }
+    const audio = audioRefs.current[audioKey];
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch((error) => {
+        if (error.name === 'NotAllowedError' || error.name === 'NotSupportedError') {
+          resumeAudioContext().then(() => {
+            audio.play().catch(() => {});
+          });
+        }
+      });
+    }
+  }, [isEnabled, isMuted, resumeAudioContext, loadAudioFile]);
 
   // Generate different sound effects
   const generateSound = useCallback(
     (soundType: SoundType) => {
       if (!audioContextRef.current || !isInitialized) return
+
+      // Ensure audio context is resumed before generating sounds
+      if (audioContextRef.current.state === 'suspended') {
+        resumeAudioContext().then(() => {
+          generateSound(soundType)
+        })
+        return
+      }
 
       const ctx = audioContextRef.current
       const oscillator = ctx.createOscillator()
@@ -81,6 +176,15 @@ export function useSoundEffects() {
           oscillator.frequency.exponentialRampToValueAtTime(800, now + 0.05)
           gainNode.gain.setValueAtTime(0.03, now)
           gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+          oscillator.type = "sine"
+          break
+
+        case "hashtagHover":
+          // Very subtle hashtag hover sound
+          oscillator.frequency.setValueAtTime(500, now)
+          oscillator.frequency.exponentialRampToValueAtTime(700, now + 0.03)
+          gainNode.gain.setValueAtTime(0.02, now)
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.03)
           oscillator.type = "sine"
           break
 
@@ -113,6 +217,28 @@ export function useSoundEffects() {
           oscillator.type = "sine"
           break
 
+        case "inkify":
+          // Magical swirling sound for inkify
+          oscillator.frequency.setValueAtTime(200, now)
+          oscillator.frequency.setValueAtTime(400, now + 0.1)
+          oscillator.frequency.setValueAtTime(300, now + 0.2)
+          oscillator.frequency.setValueAtTime(500, now + 0.3)
+          gainNode.gain.setValueAtTime(0.08, now)
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
+          oscillator.type = "sine"
+          break
+
+        case "reflection":
+          // Gentle chime for reflection
+          oscillator.frequency.setValueAtTime(523, now) // C5
+          oscillator.frequency.setValueAtTime(659, now + 0.1) // E5
+          oscillator.frequency.setValueAtTime(784, now + 0.2) // G5
+          oscillator.frequency.setValueAtTime(1047, now + 0.3) // C6
+          gainNode.gain.setValueAtTime(0.1, now)
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
+          oscillator.type = "sine"
+          break
+
         case "modalOpen":
           // Modal open swoosh
           oscillator.frequency.setValueAtTime(200, now)
@@ -130,6 +256,16 @@ export function useSoundEffects() {
           gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.2)
           oscillator.type = "sawtooth"
           break
+
+        case "error":
+          // Error/warning sound
+          oscillator.frequency.setValueAtTime(400, now)
+          oscillator.frequency.setValueAtTime(300, now + 0.1)
+          oscillator.frequency.setValueAtTime(350, now + 0.2)
+          gainNode.gain.setValueAtTime(0.1, now)
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3)
+          oscillator.type = "square"
+          break
       }
 
       try {
@@ -139,15 +275,44 @@ export function useSoundEffects() {
         // Silently handle any audio errors
       }
     },
-    [isInitialized],
+    [isInitialized, resumeAudioContext],
   )
 
   const playSound = useCallback(
     (soundType: SoundType) => {
-      if (!isEnabled || isMuted || !isInitialized) return
-      generateSound(soundType)
+      if (!isEnabled || isMuted) return
+      
+      // Ensure audio context is resumed before playing any sound
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        resumeAudioContext().then(() => {
+          // Retry playing the sound after resuming
+          setTimeout(() => playSound(soundType), 50)
+        })
+        return
+      }
+      
+      // Play audio files for specific sounds
+      if (soundType === "notification") {
+        playAudioFile("notification")
+        return
+      }
+      
+      if (soundType === "share") {
+        playAudioFile("share")
+        return
+      }
+
+      if (soundType === "success") {
+        playAudioFile("success")
+        return
+      }
+      
+      // Generate sounds for other types
+      if (isInitialized) {
+        generateSound(soundType)
+      }
     },
-    [isEnabled, isMuted, isInitialized, generateSound],
+    [isEnabled, isMuted, isInitialized, generateSound, playAudioFile, resumeAudioContext],
   )
 
   const toggleMute = useCallback(() => {
@@ -167,7 +332,9 @@ export function useSoundEffects() {
     isMuted,
     isEnabled,
     isInitialized,
+    isAudioContextResumed,
     toggleMute,
     toggleSounds,
+    resumeAudioContext,
   }
 }
