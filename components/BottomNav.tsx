@@ -1,12 +1,17 @@
 "use client"
 
-import { Home, Compass, User, PenTool, Bell, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import type React from "react"
+
+import { Home, Search, Plus, Bell, Settings } from "lucide-react"
 import { useSoundEffects } from "../hooks/use-sound-effects"
 import { useEffect, useRef, useState } from "react"
+import { useRouter, usePathname } from "next/navigation"
 
 export default function BottomNav() {
   const { playSound } = useSoundEffects()
+  const router = useRouter()
+  const pathname = usePathname()
+
   // Smart show/hide on scroll
   const [visible, setVisible] = useState(true)
   const lastScrollY = useRef(0)
@@ -27,83 +32,133 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Always show signed-in nav
-  const nav = [
-    { icon: Home, label: "Home" },
-    { icon: Compass, label: "Explore" },
-    { icon: User, label: "Profile" },
-    { icon: Bell, label: "Notifications" },
+  const navItems = [
+    {
+      icon: Home,
+      label: "Home",
+      id: "home",
+      href: "/",
+      ariaLabel: "Navigate to home page",
+    },
+    {
+      icon: Search,
+      label: "Explore",
+      id: "explore",
+      href: "/explore",
+      ariaLabel: "Explore and discover new content",
+    },
+    {
+      icon: Plus,
+      label: "Create",
+      id: "create",
+      href: "/create",
+      ariaLabel: "Create new ink post",
+      isSpecial: true,
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      id: "notifications",
+      href: "/notifications",
+      ariaLabel: "View your notifications",
+    },
+    {
+      icon: Settings,
+      label: "Settings",
+      id: "settings",
+      href: "/settings",
+      ariaLabel: "Access app settings",
+    },
   ]
 
-  // Simulate active nav (replace with router logic)
-  const activeLabel = "Home"
+  // Get active nav based on current pathname
+  const getActiveId = () => {
+    if (pathname === "/") return "home"
+    if (pathname.startsWith("/explore")) return "explore"
+    if (pathname.startsWith("/create")) return "create"
+    if (pathname.startsWith("/notifications")) return "notifications"
+    if (pathname.startsWith("/settings")) return "settings"
+    if (pathname.startsWith("/test-nav")) return "home" // For testing
+    return "home"
+  }
+
+  const activeId = getActiveId()
 
   const handleButtonHover = () => {
     playSound("hover")
   }
 
-  const handleButtonClick = (label: string) => {
+  const handleButtonClick = (item: (typeof navItems)[0]) => {
     playSound("click")
-    // TODO: Add navigation or modal logic here
-    alert(label + " clicked!")
+
+    // Navigate to the route
+    if (item.href) {
+      router.push(item.href)
+    }
+
+    // Log for testing
+    console.log(`Navigating to ${item.label}`)
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent, item: (typeof navItems)[0]) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleButtonClick(item)
+    }
   }
 
   return (
     <nav
-      className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95vw] max-w-md rounded-2xl bg-gradient-to-br from-white/90 to-white/60 backdrop-blur-md shadow-lg border border-gray-100 px-1.5 py-1 flex justify-between items-center sm:hidden transition-transform duration-300 ${visible ? "translate-y-0" : "translate-y-24"}`}
+      className={`fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl shadow-[0_-4px_32px_rgba(0,0,0,0.12)] border-t border-gray-100/50 px-4 py-2 flex justify-between items-center sm:hidden transition-all duration-300 ${
+        visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+      }`}
       role="navigation"
-      aria-label="Bottom navigation"
+      aria-label="Main navigation"
     >
-      {/* Left nav items (Home, Explore) */}
-      <div className="flex gap-1 flex-1 justify-start items-center" role="group" aria-label="Primary navigation">
-        {nav.slice(0, 2).map(({ icon: Icon, label }) => (
-          <button
-            key={label}
-            aria-label={label}
-            className={`flex flex-col items-center justify-center px-1 py-1 rounded-lg transition-all duration-150 ${activeLabel === label ? "text-purple-600 font-bold" : "text-gray-600 hover:text-purple-500 font-normal"}`}
-            onMouseEnter={handleButtonHover}
-            onClick={() => handleButtonClick(label)}
-            title={`Go to ${label}`}
-            aria-current={activeLabel === label ? "page" : undefined}
-          >
-            <Icon className="w-6 h-6 mb-0" aria-hidden="true" />
-            <span className="text-xs md:text-sm lg:text-base leading-none mt-0">{label}</span>
-            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" aria-hidden="true" />}
-          </button>
-        ))}
-      </div>
-
-      {/* Center FAB (Create) */}
-      <div className="relative flex-1 flex justify-center items-center">
+      {navItems.map(({ icon: Icon, label, id, ariaLabel, isSpecial, ...item }) => (
         <button
-          aria-label="Create new ink"
-          className="absolute -top-4 shadow-[0_2px_12px_0_rgba(80,0,120,0.14)] bg-purple-600 hover:bg-purple-700 text-white w-11 h-11 z-20 flex items-center justify-center transition-transform duration-200 active:scale-95"
-          onClick={() => handleButtonClick("Create")}
-          style={{ borderRadius: "50%" }}
-          title="Create new ink"
+          key={id}
+          aria-label={ariaLabel}
+          className={`group relative flex flex-col items-center justify-center gap-1 px-3 py-1.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white min-h-[44px] min-w-[44px] ${
+            isSpecial
+              ? "bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl active:scale-95"
+              : activeId === id
+                ? "text-purple-600"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:scale-95"
+          }`}
+          onMouseEnter={handleButtonHover}
+          onClick={() => handleButtonClick({ icon: Icon, label, id, ariaLabel, isSpecial, ...item })}
+          onKeyDown={(e) => handleKeyDown(e, { icon: Icon, label, id, ariaLabel, isSpecial, ...item })}
+          title={`${label} - ${ariaLabel}`}
+          aria-current={activeId === id ? "page" : undefined}
+          tabIndex={0}
         >
-          <PenTool className="w-5 h-5" aria-hidden="true" />
-        </button>
-      </div>
+          <Icon
+            className={`transition-all duration-200 ${
+              isSpecial ? "w-6 h-6" : activeId === id ? "w-5 h-5 scale-110" : "w-5 h-5 group-hover:scale-105"
+            }`}
+            aria-hidden="true"
+          />
 
-      {/* Right nav items (Profile, Notifications) */}
-      <div className="flex gap-1 flex-1 justify-end items-center" role="group" aria-label="Secondary navigation">
-        {nav.slice(2).map(({ icon: Icon, label }) => (
-          <button
-            key={label}
-            aria-label={label}
-            className={`flex flex-col items-center justify-center px-1 py-1 rounded-lg transition-all duration-150 ${activeLabel === label ? "text-purple-600 font-bold" : "text-gray-600 hover:text-purple-500 font-normal"}`}
-            onMouseEnter={handleButtonHover}
-            onClick={() => handleButtonClick(label)}
-            title={`Go to ${label}`}
-            aria-current={activeLabel === label ? "page" : undefined}
-          >
-            <Icon className="w-6 h-6 mb-0" aria-hidden="true" />
-            <span className="text-xs md:text-sm lg:text-base leading-none mt-0">{label}</span>
-            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" aria-hidden="true" />}
-          </button>
-        ))}
-      </div>
+          {/* Show label for active item */}
+          {activeId === id && !isSpecial && (
+            <span className="text-[10px] font-medium leading-none transition-all duration-200 mt-0.5 text-purple-600">{label}</span>
+          )}
+
+          {/* Active indicator dot */}
+          {activeId === id && !isSpecial && (
+            <div
+              className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-purple-600 transition-all duration-200"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Hover effect for non-special buttons */}
+          {!isSpecial && (
+            <div className="absolute inset-0 rounded-xl bg-gray-100 opacity-0 group-hover:opacity-50 transition-opacity duration-200" />
+          )}
+        </button>
+      ))}
     </nav>
   )
 }
