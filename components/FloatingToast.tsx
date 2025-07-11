@@ -7,10 +7,10 @@ import { launchEmojiBurst } from "@/utils/launchEmojiBurst";
 
 export default function FloatingToast({
   message,
-  duration = 1800,
+  duration = 2500,
   className = "",
 }: {
-  message: string;
+  message: React.ReactNode;
   duration?: number;
   className?: string;
 }) {

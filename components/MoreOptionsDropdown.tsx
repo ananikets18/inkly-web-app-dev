@@ -41,7 +41,7 @@ export default function MoreOptionsDropdown({
     navigator.clipboard.writeText(url)
     setShowToast(true)
     onShared?.()
-    playSound("share")
+    // playSound("share")
     setIsCopyLocked(true)
     setTimeout(() => setIsCopyLocked(false), 3000)
   }

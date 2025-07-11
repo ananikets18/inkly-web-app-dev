@@ -27,7 +27,7 @@ export default function InkPreviewModal({
         <h2 className="text-lg font-semibold mb-2">Share this Ink</h2>
         {ink ? (
           <div className="space-y-3 text-sm text-gray-700">
-            <div className="border p-3 rounded-lg bg-white">{ink.content}</div>
+            <div className="border p-3 rounded-lg bg-white whitespace-pre-line">{ink.content}</div>
             <div className="text-xs text-gray-500">
               — {ink.author || "Anonymous"}
             </div>

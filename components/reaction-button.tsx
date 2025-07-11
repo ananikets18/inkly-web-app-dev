@@ -1,3 +1,7 @@
+// reaction-button.tsx
+// Provides the ReactionButton component and the reactions array (with icons/colors/labels).
+// Keep the reactions array in sync with any component that displays reactions (e.g., EchoedByModal).
+// To add a new reaction, update the array and ensure icons/colors are available in all consumers.
 "use client";
 
 import { useState, useRef, useEffect } from "react";

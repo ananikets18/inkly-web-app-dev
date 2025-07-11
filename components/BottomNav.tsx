@@ -51,9 +51,11 @@ export default function BottomNav() {
   return (
     <nav
       className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95vw] max-w-md rounded-2xl bg-gradient-to-br from-white/90 to-white/60 backdrop-blur-md shadow-lg border border-gray-100 px-1.5 py-1 flex justify-between items-center sm:hidden transition-transform duration-300 ${visible ? "translate-y-0" : "translate-y-24"}`}
+      role="navigation"
+      aria-label="Bottom navigation"
     >
       {/* Left nav items (Home, Explore) */}
-      <div className="flex gap-1 flex-1 justify-start items-center">
+      <div className="flex gap-1 flex-1 justify-start items-center" role="group" aria-label="Primary navigation">
         {nav.slice(0, 2).map(({ icon: Icon, label }) => (
           <button
             key={label}
@@ -61,10 +63,12 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center px-1 py-1 rounded-lg transition-all duration-150 ${activeLabel === label ? "text-purple-600 font-bold" : "text-gray-600 hover:text-purple-500 font-normal"}`}
             onMouseEnter={handleButtonHover}
             onClick={() => handleButtonClick(label)}
+            title={`Go to ${label}`}
+            aria-current={activeLabel === label ? "page" : undefined}
           >
-            <Icon className="w-6 h-6 mb-0" />
-            <span className="text-[10px] leading-none mt-0">{label}</span>
-            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" />}
+            <Icon className="w-6 h-6 mb-0" aria-hidden="true" />
+            <span className="text-xs md:text-sm lg:text-base leading-none mt-0">{label}</span>
+            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" aria-hidden="true" />}
           </button>
         ))}
       </div>
@@ -72,17 +76,18 @@ export default function BottomNav() {
       {/* Center FAB (Create) */}
       <div className="relative flex-1 flex justify-center items-center">
         <button
-          aria-label="Create"
+          aria-label="Create new ink"
           className="absolute -top-4 shadow-[0_2px_12px_0_rgba(80,0,120,0.14)] bg-purple-600 hover:bg-purple-700 text-white w-11 h-11 z-20 flex items-center justify-center transition-transform duration-200 active:scale-95"
           onClick={() => handleButtonClick("Create")}
           style={{ borderRadius: "50%" }}
+          title="Create new ink"
         >
-          <PenTool className="w-5 h-5" />
+          <PenTool className="w-5 h-5" aria-hidden="true" />
         </button>
       </div>
 
       {/* Right nav items (Profile, Notifications) */}
-      <div className="flex gap-1 flex-1 justify-end items-center">
+      <div className="flex gap-1 flex-1 justify-end items-center" role="group" aria-label="Secondary navigation">
         {nav.slice(2).map(({ icon: Icon, label }) => (
           <button
             key={label}
@@ -90,10 +95,12 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center px-1 py-1 rounded-lg transition-all duration-150 ${activeLabel === label ? "text-purple-600 font-bold" : "text-gray-600 hover:text-purple-500 font-normal"}`}
             onMouseEnter={handleButtonHover}
             onClick={() => handleButtonClick(label)}
+            title={`Go to ${label}`}
+            aria-current={activeLabel === label ? "page" : undefined}
           >
-            <Icon className="w-6 h-6 mb-0" />
-            <span className="text-[10px] leading-none mt-0">{label}</span>
-            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" />}
+            <Icon className="w-6 h-6 mb-0" aria-hidden="true" />
+            <span className="text-xs md:text-sm lg:text-base leading-none mt-0">{label}</span>
+            {activeLabel === label && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1" aria-hidden="true" />}
           </button>
         ))}
       </div>

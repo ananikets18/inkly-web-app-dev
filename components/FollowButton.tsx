@@ -29,7 +29,14 @@ const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent }: Follow
             onClick={onFollow}
             aria-label={label}
             role="button"
-            className={`flex items-center gap-1 rounded-full border text-xs font-semibold transition-all duration-200 bg-white h-auto px-3 py-1 ${isFollowing ? "border-purple-300 text-purple-500" : "border-purple-500 text-purple-600 hover:bg-purple-50"} ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+            className={`flex items-center gap-1 rounded-full border text-xs font-semibold transition-all duration-200 h-auto px-3 py-1
+              ${isFollowing
+                ? "bg-purple-100 border-purple-200 text-purple-800 hover:bg-purple-200"
+                : "bg-purple-100 text-purple-500 border-purple-200 hover:bg-purple-200"}
+              ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+            title={isLoading ? (followIntent === "unfollow" ? "Unfollowing..." : "Following...") : (isFollowing ? "Unfollow this user" : "Follow this user")}
+            aria-pressed={isFollowing}
+            aria-busy={isLoading}
           >
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
@@ -40,8 +47,8 @@ const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent }: Follow
             transition={{ duration: 0.2 }}
             className="inline-flex items-center gap-1"
           >
-            {label === "Following" && <Check className="w-4 h-4 text-purple-500" aria-hidden="true" />}
-            {label}
+            {label === "Following" && <Check className="w-4 h-4 text-purple-800" aria-hidden="true" />}
+            <span>{label}</span>
           </motion.span>
         </AnimatePresence>
       </Button>

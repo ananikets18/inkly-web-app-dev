@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 type Author = { initials: string; color: string }
 
@@ -39,7 +40,11 @@ export default function NewInksToast({ visible, authors, onClick, onHover }: New
                   transition={{ delay: idx * 0.1, duration: 0.3 }}
                   className={`w-6 h-6 rounded-full text-white text-xs font-semibold flex items-center justify-center ring-2 ring-white ${author.color}`}
                 >
-                  {author.initials}
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback className={`bg-gradient-to-br ${author.color} text-white text-xs font-medium`}>
+                      {author.initials}
+                    </AvatarFallback>
+                  </Avatar>
                 </motion.div>
               ))}
             </div>

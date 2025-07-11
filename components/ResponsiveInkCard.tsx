@@ -9,12 +9,13 @@ import { useSoundEffects } from "../hooks/useSoundEffects";
 interface ResponsiveInkCardProps {
   // Match the full props of InkCard for now
   id: number;
+  inkId?: string; // add optional inkId for navigation
   content: string;
   author: string;
   avatarColor: string;
   isLong?: boolean;
   readingTime: { text: string; minutes: number };
-  views: number;
+  views?: number; // make optional
   echoCount: number;
   reaction?: { reaction: string; count: number };
   bookmarkCount: number;
@@ -30,6 +31,7 @@ interface ResponsiveInkCardProps {
   onBookmark: () => void;
   onShare: () => void;
   onFollow: () => void;
+  small?: boolean;
 }
 
 function getRandomViews(id: number) {
@@ -42,6 +44,7 @@ function getRandomViews(id: number) {
 }
 
 export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
+  const { small = false, ...rest } = props;
   const [isMobile, setIsMobile] = useState(false);
   const { playSound } = useSoundEffects();
 
@@ -210,8 +213,8 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
   console.log("ResponsiveInkCard rendered", { isMobile });
 
   if (isMobile) {
-    return <InkCardMobile {...props} views={randomViews} {...sharedState} isFollowIntent={isFollowIntent === "follow" ? true : isFollowIntent === "unfollow" ? false : null} setIsFollowIntent={(v) => setIsFollowIntent(v === true ? "follow" : v === false ? "unfollow" : null)} followMessage={followMessage || ""} />;
+    return <InkCardMobile {...rest} views={randomViews} inkId={props.inkId} {...sharedState} isFollowIntent={isFollowIntent === "follow" ? true : isFollowIntent === "unfollow" ? false : null} setIsFollowIntent={(v) => setIsFollowIntent(v === true ? "follow" : v === false ? "unfollow" : null)} followMessage={followMessage || ""} />;
   }
 
-  return <InkCard baseEchoCount={0} {...props} views={randomViews} {...sharedState} />;
+  return <InkCard baseEchoCount={0} {...rest} views={randomViews} inkId={props.inkId} {...sharedState} small={small} />;
 }

@@ -24,6 +24,7 @@ interface ReflectModalProps {
   open: boolean;
   onClose: () => void;
   onRepost: () => void;
+  onUndoRepost: () => void;
   onSubmit: (text: string) => void;
   originalInk: {
     content: string;
@@ -38,6 +39,7 @@ export default function ReflectModal({
   open,
   onClose,
   onRepost,
+  onUndoRepost,
   onSubmit,
   originalInk,
   hasReflected,
@@ -171,12 +173,11 @@ export default function ReflectModal({
         {mode === "menu" ? (
           <div className="grid gap-3">
           <Button
-            onClick={handleRepost}
+            onClick={hasInkified ? onUndoRepost : handleRepost}
             className="w-full justify-start gap-2 text-purple-700 bg-purple-50 hover:bg-purple-100"
-            disabled={hasInkified}
           >
             <Repeat className="w-4 h-4" />
-            Inkify this Ink
+            {hasInkified ? "Undo Inkify" : "Inkify this Ink"}
           </Button>
 
             <Button

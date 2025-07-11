@@ -20,6 +20,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { UserBadge, VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName } from "./ui/user-badges";
 import { AvatarBadge } from "./ui/user-badges";
 import { useSoundEffects } from "../hooks/use-sound-effects";
+import Link from "next/link";
+import FloatingToast from "../components/FloatingToast";
 
 interface InkCardProps {
   id: number;
@@ -81,6 +83,8 @@ interface InkCardProps {
   handleReaction: (reactionId: string | null) => void;
   handleBookmark: (e: React.MouseEvent) => void;
   handleFollowClick: (e: React.MouseEvent) => void;
+  inkId?: string;
+  small?: boolean;
 }
 
 // Helper to get hashtags and mood based on content
@@ -168,6 +172,8 @@ const InkCardComponent = (props: InkCardProps) => {
     handleReaction,
     handleBookmark,
     handleFollowClick,
+    inkId,
+    small = false,
     ...rest
   } = props;
 
@@ -185,7 +191,8 @@ const InkCardComponent = (props: InkCardProps) => {
   // Determine truncation length
   const TRUNCATE_LENGTH = isLong ? 280 : 120;
   const isTruncatable = content.length > TRUNCATE_LENGTH;
-  const displayContent = expanded || !isTruncatable ? content : truncate(content, TRUNCATE_LENGTH);
+
+  const [undoInkifyMsg, setUndoInkifyMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (followMessage) {
@@ -194,10 +201,17 @@ const InkCardComponent = (props: InkCardProps) => {
     }
   }, [followMessage]);
 
+  useEffect(() => {
+    if (showEchoAnim) {
+      const timeout = setTimeout(() => setShowEchoAnim(false), 600);
+      return () => clearTimeout(timeout);
+    }
+  }, [showEchoAnim, setShowEchoAnim]);
+
   return (
     <>
-      <div className="w-full bg-white rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-purple-100" onClick={onClick}>
-        <div className="flex items-center justify-between mb-6">
+      <div className={`w-full bg-white rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-purple-100${small ? ' text-xs' : ''}`} onClick={onClick}>
+        <div className={`flex items-center justify-between mb-6${small ? ' text-xs' : ''}`}>
           <div className="flex items-center gap-2">
             <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
               getUserBadgeType(author) === 'creator' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
@@ -233,19 +247,40 @@ const InkCardComponent = (props: InkCardProps) => {
           </div>
         </div>
 
-        <div className="mb-4 text-[15px] sm:text-[16px] md:text-[17px] lg:text-[18px] font-semibold text-gray-900 leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-3 sm:py-2">
-          {displayContent}
-          {isTruncatable && !expanded && (
-            <button
-              className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
-              onClick={e => { e.stopPropagation(); setExpanded(true); }}
+        <div className={`mb-4 ${small ? 'text-xs' : 'text-base sm:text-[16px] md:text-[17px] lg:text-[18px]'} font-semibold text-gray-900 leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-3 sm:py-2`}>
+          <Link href={`/ink/${inkId ?? id}`} passHref legacyBehavior>
+            <a
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              onClick={e => e.stopPropagation()}
             >
-              Read more
-            </button>
-          )}
+              {expanded || !isTruncatable ? (
+                <>
+                  {content}
+                  {isTruncatable && expanded && (
+                    <button
+                      className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
+                      onClick={e => { e.stopPropagation(); setExpanded(false); }}
+                    >
+                      Read less
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {truncate(content, TRUNCATE_LENGTH)}
+                  <button
+                    className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
+                    onClick={e => { e.stopPropagation(); setExpanded(true); }}
+                  >
+                    Read more
+                  </button>
+                </>
+              )}
+            </a>
+          </Link>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-2 text-sm">
+        <div className={`flex items-center space-between flex-wrap gap-2 mb-2 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'}`}>
           {tags.map((tag) => (
             <span 
               key={tag} 
@@ -254,10 +289,10 @@ const InkCardComponent = (props: InkCardProps) => {
               {tag}
             </span>
           ))}
-          <span className="bg-purple-50 border border-purple-50 text-purple-600 font-medium px-2 py-1 rounded-full ml-auto text-xs">{mood}</span>
+          <span className={`bg-purple-50 border border-purple-50 text-purple-600 font-medium px-2 py-1 rounded-full ml-auto ${small ? 'text-[11px]' : 'text-xs'}`}>{mood}</span>
         </div>
 
-        <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
+        <div className={`flex justify-between items-center ${small ? 'text-[11px]' : 'text-xs'} text-gray-500 pt-2 border-t border-gray-100`}>
           <div className="flex items-center gap-3">
             <ReactionButton
               onReaction={handleReaction}
@@ -290,15 +325,15 @@ const InkCardComponent = (props: InkCardProps) => {
               <Bookmark className={`w-4 h-4 ${bookmarked ? "text-purple-600 fill-purple-100" : ""}`} />
             </Button>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{readingTime.text}</span></div>
+          <div className={`flex items-center gap-3 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'} text-gray-500`}>
+            <div className="flex items-center gap-1"><Clock className="w-4 h-4" /><span>{readingTime.text}</span></div>
             <span>•</span>
             <div className="flex items-center gap-1"><Eye className="w-4 h-4" /><span>{formatCount(views)}</span></div>
           </div>
         </div>
 
        {echoCount > 0 && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 pt-1 pl-1">
+        <div className="relative flex items-center gap-2 text-xs text-gray-500 pt-1 pl-1">
           <motion.div
             className="flex"
             key={echoCount}
@@ -322,6 +357,11 @@ const InkCardComponent = (props: InkCardProps) => {
           setHasInkified(true);
           setReflectOpen(false);
         }}
+        onUndoRepost={() => {
+          setHasInkified(false);
+          setUndoInkifyMsg("Inkify undone. You can repost if you wish.");
+          setReflectOpen(false);
+        }}
         onSubmit={(text) => {
           setReflectionCountLocal((prev: number) => prev + 1);
           setHasReflected(true);
@@ -332,9 +372,10 @@ const InkCardComponent = (props: InkCardProps) => {
         hasInkified={hasInkified}
       />
 
-      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id} content={content} />
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id.toString()} content={content} />
       {bookmarkMessage && <BookmarkToast message={bookmarkMessage} />}
       {followMessage && <FollowToast key={followMessage} message={followMessage} />}
+      {undoInkifyMsg && <FloatingToast key={undoInkifyMsg} message={undoInkifyMsg} />}
 
 
     </>

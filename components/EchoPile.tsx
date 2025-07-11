@@ -66,9 +66,9 @@ export default function EchoPile({ users, total, poetic = false }: EchoPileProps
       ) : (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 align-middle">
               {AvatarList}
-              <span className="font-medium">{total} Echo{total > 1 ? "es" : ""}</span>
+              <span className="font-medium align-middle">{total} Echo{total > 1 ? "es" : ""}</span>
             </div>
           </TooltipTrigger>
           <TooltipContent>{tooltipText}</TooltipContent>

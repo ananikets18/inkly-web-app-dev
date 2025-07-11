@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useRef, useState } from "react"
 
 // Main navigation items (top, grouped)
 const navItems = [
@@ -37,6 +38,26 @@ const supportItems = [
 export default function SideNav() {
   const router = useRouter()
   const pathname = usePathname()
+  const [visible, setVisible] = useState(true)
+  const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Only apply on screens where SideNav is visible
+      if (window.innerWidth < 640) return
+      const currentY = window.scrollY
+      if (currentY < 32) {
+        setVisible(true)
+      } else if (currentY > lastScrollY.current) {
+        setVisible(false) // scrolling down
+      } else {
+        setVisible(true) // scrolling up
+      }
+      lastScrollY.current = currentY
+    }
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
   const handleButtonHover = () => {}
 
@@ -47,9 +68,13 @@ export default function SideNav() {
   }
 
   return (
-    <aside className="isolate z-50 sticky top-[73px] hidden sm:block w-16 bg-white border-r border-gray-200 h-[calc(100vh-73px)]">
+    <aside
+      className={`isolate z-50 sticky top-[73px] hidden sm:block w-16 bg-white border-r border-gray-200 h-[calc(100vh-73px)] transition-transform duration-300 ${visible ? 'translate-x-0' : '-translate-x-24'}`}
+      role="complementary"
+      aria-label="Side navigation"
+    >
       {/* Main nav group (no extra spacing) */}
-      <nav className="flex flex-col items-center py-6 space-y-7">
+      <nav className="flex flex-col items-center py-6 space-y-7" role="navigation" aria-label="Main navigation">
         {navItems.map(({ icon: Icon, label, href }, i) => (
           <div key={i} className="relative group last:mb-0">
             <Button
@@ -62,17 +87,17 @@ export default function SideNav() {
               onClick={() => handleNavClick(href)}
               {...(pathname === href ? { 'aria-current': 'page' } : {})}
             >
-              <Icon className="w-10 h-10" />
+              <Icon className="w-10 h-10" aria-hidden="true" />
             </Button>
             {/* Tooltip */}
-            <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-800 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] pointer-events-none">
+            <span id={`tooltip-${label.toLowerCase()}`} className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-800 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] pointer-events-none" role="tooltip">
               {label}
             </span>
           </div>
         ))}
       </nav>
       {/* Support nav at the bottom */}
-      <nav className="flex flex-col items-center absolute bottom-6 left-0 w-full space-y-0">
+      <nav className="flex flex-col items-center absolute bottom-6 left-0 w-full space-y-0" role="navigation" aria-label="Support navigation">
         {supportItems.map(({ icon: Icon, label, href }, i) => (
           <div key={i} className="relative group mb-4 last:mb-0">
             <Button
@@ -85,10 +110,10 @@ export default function SideNav() {
               onClick={() => handleNavClick(href)}
               {...(pathname === href ? { 'aria-current': 'page' } : {})}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="w-5 h-5" aria-hidden="true" />
             </Button>
             {/* Tooltip */}
-            <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-800 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] pointer-events-none">
+            <span id={`tooltip-${label.toLowerCase()}`} className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-800 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-[9999] pointer-events-none" role="tooltip">
               {label}
             </span>
           </div>

@@ -29,7 +29,7 @@ const reportReasons = [
 interface ReportModalProps {
   open: boolean;
   onClose: () => void;
-  inkId: number;
+  inkId: string;
   content: string;
 }
 
@@ -232,13 +232,14 @@ export default function ReportModal({
           )}
 
           <Button
-            onClick={handleSubmit}
+            onClick={e => { e.stopPropagation(); handleSubmit() }}
             disabled={
               !selectedReason ||
               (isOther && (!customText.trim() || isOverLimit)) ||
               isSubmitting
             }
             className="mt-6 w-full"
+            title={!selectedReason ? "Please select a reason" : (isOther && (!customText.trim() || isOverLimit)) ? "Please provide a valid description" : "Submit your report"}
           >
             {isSubmitting ? "Reporting..." : "Submit Report"}
           </Button>

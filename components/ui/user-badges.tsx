@@ -77,7 +77,7 @@ export function UserBadge({ type, className = '' }: UserBadgeProps) {
   const config = badgeConfig[type];
   
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${config.colors} ${className}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${config.colors} ${className}`} title={`${config.label} - Special community member`}>
       {config.icon}
       {config.label}
     </span>
@@ -88,7 +88,7 @@ export function AvatarBadge({ type, className = '' }: AvatarBadgeProps) {
   const config = badgeConfig[type];
   
   return (
-    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${config.avatarColors} ${className}`}>
+    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${config.avatarColors} ${className}`} title={`${config.label} - Special community member`}>
       {config.icon}
     </div>
   );
@@ -97,6 +97,7 @@ export function AvatarBadge({ type, className = '' }: AvatarBadgeProps) {
 export function VerifiedTick({ className = '' }: { className?: string }) {
   return (
     <svg className={`w-3.5 h-3.5 text-purple-600 flex-shrink-0 ${className}`} viewBox="0 0 24 24" fill="currentColor" aria-label="Verified">
+      <title>Verified user</title>
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
     </svg>
   );

@@ -1,26 +1,21 @@
 "use client"
 
-import ToastPortal from "./ToastPortal"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { useToast } from "@/components/ui/use-toast"
 
-export default function BookmarkToast({ message }: { message: string }) {
-  const [visible, setVisible] = useState(true)
+interface BookmarkToastProps {
+  message: string
+}
+
+export default function BookmarkToast({ message }: BookmarkToastProps) {
+  const { toast } = useToast()
 
   useEffect(() => {
-    const timeout = setTimeout(() => setVisible(false), 1800)
-    return () => clearTimeout(timeout)
-  }, [])
+    toast({
+      title: message,
+      duration: 2000,
+    })
+  }, [message, toast])
 
-  if (!visible) return null
-
-  return (
-    <ToastPortal>
-      <div
-        role="status"
-        aria-live="polite" 
-        className="fixed top-16 inset-x-0 mx-auto max-w-fit z-[1000] rounded-full bg-purple-600 text-white px-4 py-2 text-xs font-medium shadow-lg animate-fade-in-out">
-        {message}
-      </div>
-    </ToastPortal>
-  )
+  return null
 }

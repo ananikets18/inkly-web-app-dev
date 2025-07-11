@@ -21,9 +21,11 @@ import { getTagsAndMood } from "./InkCard";
 import { UserBadge, VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName } from "./ui/user-badges";
 import { AvatarBadge } from "./ui/user-badges";
 import { useSoundEffects } from "../hooks/use-sound-effects";
+import Link from "next/link";
 
 interface InkCardMobileProps {
-  id: number;
+  id: number | string;
+  inkId?: string;
   content: string;
   author: string;
   avatarColor: string;
@@ -105,6 +107,7 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
     handleBookmark,
     handleFollowClick,
     id,
+    inkId,
     content,
     author,
     avatarColor,
@@ -124,7 +127,7 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
   const hasReacted = localReaction.reaction !== null;
   const hasBookmarked = bookmarked;
   const totalEchoes = formatCount(echoCount);
-  const shareUrl = `https://inkly.app/?share=${id}`;
+  const shareUrl = `https://inkly.app/?share=${String(id)}`;
 
   const { tags, mood } = getTagsAndMood(content);
   const [expanded, setExpanded] = useState(false);
@@ -142,8 +145,8 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
   const handleReportClick = useCallback(() => setReportOpen(true), [setReportOpen]);
 
   return (
-    <div className="w-full bg-white rounded-xl shadow-sm px-4 py-5 mb-4">
-      <div className="flex items-center justify-between mb-6">
+    <article className="w-full sm:bg-white sm:rounded-xl sm:shadow-sm border-b border-gray-200 p-7 mb-0" role="article" aria-labelledby={`ink-mobile-title-${String(id)}`} aria-describedby={`ink-mobile-content-${String(id)}`}>
+      <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
             getUserBadgeType(author) === 'creator' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
@@ -162,49 +165,63 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
               <AvatarBadge type={getUserBadgeType(author)!} />
             )}
           </div>
-          <div className="flex flex-col -space-y-1">
-            <span className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+          <div className="flex flex-col -space-y-0">
+            <span id={`ink-mobile-title-${String(id)}`} className="text-sm font-semibold text-gray-900 flex items-center gap-1">
               {getDisplayName(author)}
               {/* Only show verified tick for contributors (not special users) */}
               {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && (
                 <VerifiedTick />
               )}
             </span>
-            <span className="text-xs text-gray-500">3h ago</span>
+            <time className="text-xs text-gray-500" dateTime="2024-01-01T09:00:00Z" aria-label="Posted 3 hours ago">3h ago</time>
           </div>
         </div>
-        <div className="flex items-center gap-0">
+        <div className="flex items-center gap-0" role="group" aria-label="Post actions">
           <FollowButton onFollow={handleFollowClick} isFollowing={isFollowing} isLoading={isFollowLoading} followIntent={null} />
           <MoreOptionsDropdown url={shareUrl} onShared={onShare} onReportClick={handleReportClick} />
         </div>
-      </div>
+      </header>
 
-      <div className="mb-4 text-[16px] sm:text-[17px] md:text-[18px] font-semibold text-gray-900 leading-relaxed whitespace-pre-line">
-        {displayContent}
-        {isTruncatable && !expanded && (
+      <div id={`ink-content-${String(id)}`} className="mb-3 text-base font-semibold text-gray-900 leading-relaxed whitespace-pre-line px-2 py-1">
+        <Link href={`/ink/${props.inkId ?? String(id)}`} prefetch style={{ color: 'inherit', textDecoration: 'none' }}>
+          {displayContent}
+        </Link>
+        {isTruncatable && (
           <button
+            onClick={e => { e.stopPropagation(); e.preventDefault(); setExpanded(!expanded); }}
+            title={expanded ? "Show less content" : "Show full content"}
+            aria-label={expanded ? "Collapse to show less content" : "Expand to show full content"}
             className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
-            onClick={e => { e.stopPropagation(); setExpanded(true); }}
           >
-            Read more
+            {expanded ? "Read less" : "Read more"}
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-2 text-sm">
+      <div className="flex flex-wrap gap-2 mb-2 text-xs" role="group" aria-label="Content tags and mood">
         {tags.map((tag: string) => (
           <span 
             key={tag} 
             className="hover:text-purple-800 hover:underline cursor-pointer text-purple-700 text-xs transition-all duration-200"
+            title={`Explore ${tag} content`}
+            role="button"
+            tabIndex={0}
+            aria-label={`Browse ${tag} content`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                // Handle tag click
+              }
+            }}
           >
             {tag}
           </span>
         ))}
-        <span className="bg-purple-50 border border-purple-50 text-purple-600 font-medium px-2 py-1 rounded-full ml-auto text-xs">{mood}</span>
+        <span className="bg-purple-50 border border-purple-50 text-purple-600 font-medium px-2 py-1 rounded-full ml-auto text-xs" aria-label={`Content mood: ${mood}`}>{mood}</span>
       </div>
 
-      <div className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
-        <div className="flex items-center gap-3">
+      <footer className="flex justify-between items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-3" role="group" aria-label="Post interactions">
           <ReactionButton
             onReaction={handleReaction}
             selectedReaction={localReaction.reaction}
@@ -220,8 +237,10 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
             }}
             className="relative text-gray-500 hover:text-blue-600 w-8 h-8"
             disabled={hasReflected && hasInkified}
+            title={hasReflected && hasInkified ? "Already reflected and reposted" : "Add reflection or repost"}
+            aria-label={hasReflected && hasInkified ? "Already reflected and reposted" : "Add reflection or repost"}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317" />
             </svg>
           </Button>
@@ -231,19 +250,27 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
             className={`relative text-gray-500 hover:text-purple-600 w-8 h-8 transition-transform ${animateBookmark ? "scale-110" : ""}`}
             onMouseEnter={triggerEchoAnim}
             onClick={props.handleBookmark}
+            title={bookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
+            aria-label={bookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
           >
-            <Bookmark className={`w-4 h-4 ${bookmarked ? "text-purple-600 fill-purple-100" : ""}`} />
+            <Bookmark className={`w-4 h-4 ${bookmarked ? "text-purple-600 fill-purple-100" : ""}`} aria-hidden="true" />
           </Button>
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          <div className="flex items-center gap-1"><Clock className="w-3 h-3" /><span>{readingTime.text}</span></div>
-          <span>•</span>
-          <div className="flex items-center gap-1"><Eye className="w-4 h-4" /><span>{formatCount(views)}</span></div>
+        <div className="flex items-center gap-3 text-xs text-gray-500" role="group" aria-label="Post statistics">
+          <div className="flex items-center gap-1" title="Reading time" aria-label={`Reading time: ${readingTime.text}`}>
+            <Clock className="w-3 h-3" aria-hidden="true" />
+            <span>{readingTime.text}</span>
+          </div>
+          <span aria-hidden="true">•</span>
+          <div className="flex items-center gap-1" title="View count" aria-label={`${formatCount(views)} views`}>
+            <Eye className="w-4 h-4" aria-hidden="true" />
+            <span>{formatCount(views)}</span>
+          </div>
         </div>
-      </div>
+      </footer>
 
       {echoCount > 0 && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 pt-1 pl-1">
+        <div className="flex items-center gap-2 text-xs text-gray-500 pt-1 pl-1" aria-label={`${echoCount} echo${echoCount > 1 ? 's' : ''}`}>
           <motion.div
             className="flex"
             key={echoCount}
@@ -277,7 +304,7 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
       <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id} content={content} />
       {bookmarkMessage && <BookmarkToast message={bookmarkMessage} />}
       {followMessage && <FollowToast key={followMessage} message={followMessage} />}
-    </div>
+    </article>
   );
 };
 
