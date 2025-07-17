@@ -45,9 +45,9 @@ export function useSoundEffects() {
 
     // Preload audio files
     const audioFiles: Record<string, string> = {
-      notification: '/sound/notification.wav',
-      success: '/sound/success.mp3',
-      share: '/sound/share_blip.mp3',
+      notification: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/notification-DWLeDvswKbB4IJrEp6P2ZrVQXI9VtJ.wav',
+      success: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/success-NDsUJUMG9rBCHxfMVTUH6KZPD8WfKX.mp3',
+      share: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/share_blip-smvg7yYNNcoep8wBCdTgCNbunZHcKQ.mp3',
     }
 
     Object.entries(audioFiles).forEach(([key, path]) => {
@@ -118,9 +118,9 @@ export function useSoundEffects() {
   const playAudioFile = useCallback((audioKey: string) => {
     if (!isEnabled || isMuted) return;
     const audioFiles: Record<string, string> = {
-      notification: '/sound/notification.wav',
-      success: '/sound/success.mp3',
-      share: '/sound/share_blip.mp3',
+      notification: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/notification-DWLeDvswKbB4IJrEp6P2ZrVQXI9VtJ.wav',
+      success: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/success-NDsUJUMG9rBCHxfMVTUH6KZPD8WfKX.mp3',
+      share: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/share_blip-smvg7yYNNcoep8wBCdTgCNbunZHcKQ.mp3',
     };
     if (!audioRefs.current[audioKey] && audioFiles[audioKey]) {
       loadAudioFile(audioKey, audioFiles[audioKey]);

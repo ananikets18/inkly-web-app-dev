@@ -29,4 +29,4 @@ export function useFeedContext() {
   const ctx = useContext(FeedContext);
   if (!ctx) throw new Error("useFeedContext must be used within FeedProvider");
   return ctx;
-} 
+}
