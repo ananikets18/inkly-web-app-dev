@@ -10,6 +10,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+        sans: ['GeistSans', 'sans-serif'],
+        mono: ['GeistMono', 'monospace'],
+      	},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
