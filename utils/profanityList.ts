@@ -20,4 +20,4 @@ const PROFANITY_LIST: string[] = [
   // Add more as needed for your app's audience/language
 ];
 
-export default PROFANITY_LIST; 
+export default PROFANITY_LIST;
