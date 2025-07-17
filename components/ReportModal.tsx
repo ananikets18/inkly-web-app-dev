@@ -63,7 +63,6 @@ export default function ReportModal({
     if (!selectedReason) return;
 
     if (isOther && isOverLimit) {
-      playSound("error");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
       return;
@@ -74,35 +73,30 @@ export default function ReportModal({
     // Sanitize input before submission
     const safeText = isOther ? sanitizeInput(customText) : '';
     if (isOther && containsProfanity(safeText)) {
-      playSound("error");
       setInputWarning("Please remove inappropriate language.");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
       return;
     }
     if (isOther && isEmojiSpam(safeText)) {
-      playSound("error");
       setInputWarning("Too many emojis detected. Please write a clear description.");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
       return;
     }
     if (isOther && isRepeatedCharSpam(safeText)) {
-      playSound("error");
       setInputWarning("Please avoid repeated character spam.");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
       return;
     }
     if (isOther && isOnlyPunctuationOrWhitespace(safeText)) {
-      playSound("error");
       setInputWarning("Description cannot be only punctuation or whitespace.");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
       return;
     }
     if (isOther && containsLink(safeText)) {
-      playSound("error");
       setInputWarning("Links are not allowed in reports.");
       setShouldShake(true);
       setTimeout(() => setShouldShake(false), 500);
@@ -110,7 +104,6 @@ export default function ReportModal({
     }
     setInputWarning("");
 
-    playSound("success");
     setShowToast(true);
     setToastVisible(true);
     setIsSubmitting(true);

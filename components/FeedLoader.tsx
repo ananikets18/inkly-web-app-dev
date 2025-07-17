@@ -7,4 +7,4 @@ export default function FeedLoader({ message = "Loading..." }: { message?: strin
       <span className="text-base text-gray-600 font-medium">{message}</span>
     </div>
   );
-} 
+}

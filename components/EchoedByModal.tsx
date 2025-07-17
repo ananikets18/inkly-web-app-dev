@@ -45,6 +45,16 @@ const EchoedByModal: React.FC<EchoedByModalProps> = ({ open, onClose, echoUsers,
     };
   }, [open]);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [open, onClose]);
+
   // Filter users by selected reaction
   const filteredUsers = filter
     ? echoUsers.filter((u: EchoUser) => u.reaction === filter)
@@ -148,4 +158,4 @@ const EchoedByModal: React.FC<EchoedByModalProps> = ({ open, onClose, echoUsers,
 // .custom-scrollbar::-webkit-scrollbar-track { background: #f3e8ff; border-radius: 8px; }
 // .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #a78bfa #f3e8ff; }
 
-export default EchoedByModal; 
+export default EchoedByModal;

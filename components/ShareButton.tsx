@@ -35,7 +35,7 @@
 //       navigator.clipboard.writeText(url || window.location.href)
 //       setShowToast(true)
 //       onShared?.() // trigger callback
-//         const audio = new Audio("/sound/share_blip.mp3")
+//         const audio = new Audio("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/zip-blob/inkly_ui/public/sound/share_blip-smvg7yYNNcoep8wBCdTgCNbunZHcKQ.mp3")
 //         audio.volume = 0.3 // adjust for subtle feedback
 //         audio.play()
 //          setIsCopyLocked(true)

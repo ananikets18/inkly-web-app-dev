@@ -145,7 +145,7 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
   const handleReportClick = useCallback(() => setReportOpen(true), [setReportOpen]);
 
   return (
-    <article className="w-full sm:bg-white sm:rounded-xl sm:shadow-sm border-b border-gray-200 p-7 mb-0" role="article" aria-labelledby={`ink-mobile-title-${String(id)}`} aria-describedby={`ink-mobile-content-${String(id)}`}>
+    <article className="w-full sm:bg-card sm:rounded-xl sm:shadow-sm border-b border-border p-7 mb-0" role="article" aria-labelledby={`ink-mobile-title-${String(id)}`} aria-describedby={`ink-mobile-content-${String(id)}`}>
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
@@ -166,14 +166,14 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
             )}
           </div>
           <div className="flex flex-col -space-y-0">
-            <span id={`ink-mobile-title-${String(id)}`} className="text-sm font-semibold text-gray-900 flex items-center gap-1">
+            <span id={`ink-mobile-title-${String(id)}`} className="text-sm font-semibold text-foreground flex items-center gap-1">
               {getDisplayName(author)}
               {/* Only show verified tick for contributors (not special users) */}
               {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && (
                 <VerifiedTick />
               )}
             </span>
-            <time className="text-xs text-gray-500" dateTime="2024-01-01T09:00:00Z" aria-label="Posted 3 hours ago">3h ago</time>
+            <time className="text-xs text-muted-foreground" dateTime="2024-01-01T09:00:00Z" aria-label="Posted 3 hours ago">3h ago</time>
           </div>
         </div>
         <div className="flex items-center gap-0" role="group" aria-label="Post actions">
@@ -182,7 +182,7 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
         </div>
       </header>
 
-      <div id={`ink-content-${String(id)}`} className="mb-3 text-base font-semibold text-gray-900 leading-relaxed whitespace-pre-line px-2 py-1">
+      <div id={`ink-content-${String(id)}`} className="mb-3 text-base font-semibold text-foreground leading-relaxed whitespace-pre-line px-2 py-1">
         <Link href={`/ink/${props.inkId ?? String(id)}`} prefetch style={{ color: 'inherit', textDecoration: 'none' }}>
           {displayContent}
         </Link>
@@ -244,17 +244,6 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317" />
             </svg>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`relative text-gray-500 hover:text-purple-600 w-8 h-8 transition-transform ${animateBookmark ? "scale-110" : ""}`}
-            onMouseEnter={triggerEchoAnim}
-            onClick={props.handleBookmark}
-            title={bookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
-            aria-label={bookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
-          >
-            <Bookmark className={`w-4 h-4 ${bookmarked ? "text-purple-600 fill-purple-100" : ""}`} aria-hidden="true" />
-          </Button>
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-500" role="group" aria-label="Post statistics">
           <div className="flex items-center gap-1" title="Reading time" aria-label={`Reading time: ${readingTime.text}`}>
@@ -300,8 +289,9 @@ const InkCardMobileComponent = (props: InkCardMobileProps) => {
         originalInk={{ content, author, timestamp: "3h ago" }}
         hasReflected={hasReflected}
         hasInkified={hasInkified}
+        onUndoRepost={() => {}}
       />
-      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id} content={content} />
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={String(id)} content={content} />
       {bookmarkMessage && <BookmarkToast message={bookmarkMessage} />}
       {followMessage && <FollowToast key={followMessage} message={followMessage} />}
     </article>

@@ -64,6 +64,16 @@ export default function ReflectModal({
     }
   }, [open, playSound]);
 
+  // Escape key closes modal
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [open]);
+
   const handleReflectSubmit = () => {
     if (isCoolingDown) {
       playSound("error");
@@ -103,7 +113,6 @@ export default function ReflectModal({
     setInputWarning("");
     if (text.trim().length > 0) {
       playSound("reflection");
-      playSound("success");
       onSubmit(sanitizeInput(text));
       setToastMsg("Your reflection is now part of the story ✨");
       setText("");
@@ -122,7 +131,6 @@ export default function ReflectModal({
     }
     if (!trigger()) return;
     playSound("inkify");
-    playSound("success");
     onRepost?.();
     setToastMsg("Reposted! This Ink now echoes through your feed 🌀");
     setMode("menu");

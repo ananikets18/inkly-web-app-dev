@@ -22,6 +22,7 @@ import { AvatarBadge } from "./ui/user-badges";
 import { useSoundEffects } from "../hooks/use-sound-effects";
 import Link from "next/link";
 import FloatingToast from "../components/FloatingToast";
+import UserHoverCard from "./UserHoverCard";
 
 interface InkCardProps {
   id: number;
@@ -210,36 +211,58 @@ const InkCardComponent = (props: InkCardProps) => {
 
   return (
     <>
-      <div className={`w-full bg-white rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-purple-100${small ? ' text-xs' : ''}`} onClick={onClick}>
+      <div className={`w-full bg-card rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-border${small ? ' text-xs' : ''}`} onClick={onClick}>
         <div className={`flex items-center justify-between mb-6${small ? ' text-xs' : ''}`}>
           <div className="flex items-center gap-2">
-            <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
-              getUserBadgeType(author) === 'creator' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
-              getUserBadgeType(author) === 'admin' ? 'bg-gradient-to-r from-red-400 to-pink-400' :
-              getUserBadgeType(author) === 'moderator' ? 'bg-gradient-to-r from-blue-400 to-cyan-400' :
-              getUserBadgeType(author) === 'contributor' ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
-              getUserBadgeType(author) === 'writer' ? 'bg-gradient-to-r from-orange-400 to-amber-400' :
-              getUserBadgeType(author) === 'author' ? 'bg-gradient-to-r from-indigo-400 to-purple-400' : ''
-            }`}>
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white text-base font-medium`}>
-                  {getDisplayName(author).split(" ").map((n) => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
-              {getUserBadgeType(author) && (
-                <AvatarBadge type={getUserBadgeType(author)!} />
-              )}
-            </div>
-            <div className="flex flex-col -space-y-1">
-              <span className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-                {getDisplayName(author)}
-                {/* Only show verified tick for contributors (not special users) */}
-                {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && (
-                  <VerifiedTick />
+            <UserHoverCard
+              author={author}
+              avatarColor={avatarColor}
+              isFollowing={isFollowing}
+              isFollowLoading={isFollowLoading}
+              onFollow={handleFollowClick}
+              followIntent={isFollowIntent}
+              onMessage={() => {}}
+              onViewProfile={() => {}}
+            >
+              <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
+                getUserBadgeType(author) === 'creator' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
+                getUserBadgeType(author) === 'admin' ? 'bg-gradient-to-r from-red-400 to-pink-400' :
+                getUserBadgeType(author) === 'moderator' ? 'bg-gradient-to-r from-blue-400 to-cyan-400' :
+                getUserBadgeType(author) === 'contributor' ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
+                getUserBadgeType(author) === 'writer' ? 'bg-gradient-to-r from-orange-400 to-amber-400' :
+                getUserBadgeType(author) === 'author' ? 'bg-gradient-to-r from-indigo-400 to-purple-400' : ''
+              }`}>
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white text-base font-medium`}>
+                    {getDisplayName(author).split(" ").map((n) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                {getUserBadgeType(author) && (
+                  <AvatarBadge type={getUserBadgeType(author)!} />
                 )}
-              </span>
-              <span className="text-xs text-gray-500">2h ago</span>
-            </div>
+              </div>
+            </UserHoverCard>
+            <UserHoverCard
+              author={author}
+              avatarColor={avatarColor}
+              isFollowing={isFollowing}
+              isFollowLoading={isFollowLoading}
+              onFollow={handleFollowClick}
+              followIntent={isFollowIntent}
+              onMessage={() => {}}
+              onViewProfile={() => {}}
+            >
+              <div className="flex flex-col -space-y-1 cursor-pointer">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1">
+                  {getDisplayName(author)}
+                  {/* Only show verified tick for contributors (not special users) */}
+                  {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && (
+                    <VerifiedTick />
+                  )}
+                </span>
+                <span className="text-xs text-muted-foreground">2h ago</span>
+              </div>
+            </UserHoverCard>
           </div>
           <div className="flex items-center gap-0">
             <FollowButton onFollow={handleFollowClick} isFollowing={isFollowing} isLoading={isFollowLoading}  followIntent={isFollowIntent} />
@@ -247,7 +270,7 @@ const InkCardComponent = (props: InkCardProps) => {
           </div>
         </div>
 
-        <div className={`mb-4 ${small ? 'text-xs' : 'text-base sm:text-[16px] md:text-[17px] lg:text-[18px]'} font-semibold text-gray-900 leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-3 sm:py-2`}>
+        <div className={`mb-4 ${small ? 'text-xs' : 'text-base sm:text-[16px] md:text-[17px] lg:text-[18px]'} font-semibold text-foreground leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-3 sm:py-2`}>
           <Link href={`/ink/${inkId ?? id}`} passHref legacyBehavior>
             <a
               style={{ color: 'inherit', textDecoration: 'none' }}
@@ -289,10 +312,10 @@ const InkCardComponent = (props: InkCardProps) => {
               {tag}
             </span>
           ))}
-          <span className={`bg-purple-50 border border-purple-50 text-purple-600 font-medium px-2 py-1 rounded-full ml-auto ${small ? 'text-[11px]' : 'text-xs'}`}>{mood}</span>
+          <span className={`bg-purple-50 border border-purple-50 text-purple-600 font-medium px-1.5 py-0.5 rounded-full ml-auto text-xs dark:bg-purple-900 dark:border-purple-800 dark:text-purple-200`}>{mood}</span>
         </div>
 
-        <div className={`flex justify-between items-center ${small ? 'text-[11px]' : 'text-xs'} text-gray-500 pt-2 border-t border-gray-100`}>
+        <div className={`flex justify-between items-center ${small ? 'text-[11px]' : 'text-xs'} text-muted-foreground pt-2 border-t border-border`}>
           <div className="flex items-center gap-3">
             <ReactionButton
               onReaction={handleReaction}
@@ -308,24 +331,15 @@ const InkCardComponent = (props: InkCardProps) => {
                 setReflectOpen(true);
               }}
               onMouseEnter={onHover}
-              className="relative text-gray-500 hover:text-blue-600 w-8 h-8"
+              className="relative text-muted-foreground hover:text-blue-600 w-8 h-8"
               disabled={hasReflected && hasInkified}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317" />
               </svg>
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`relative text-gray-500 hover:text-purple-600 w-8 h-8 transition-transform ${animateBookmark ? "scale-110" : ""}`}
-              onMouseEnter={onHover}
-              onClick={props.handleBookmark}
-            >
-              <Bookmark className={`w-4 h-4 ${bookmarked ? "text-purple-600 fill-purple-100" : ""}`} />
-            </Button>
           </div>
-          <div className={`flex items-center gap-3 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'} text-gray-500`}>
+          <div className={`flex items-center gap-3 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'} text-muted-foreground`}>
             <div className="flex items-center gap-1"><Clock className="w-4 h-4" /><span>{readingTime.text}</span></div>
             <span>•</span>
             <div className="flex items-center gap-1"><Eye className="w-4 h-4" /><span>{formatCount(views)}</span></div>
@@ -333,7 +347,7 @@ const InkCardComponent = (props: InkCardProps) => {
         </div>
 
        {echoCount > 0 && (
-        <div className="relative flex items-center gap-2 text-xs text-gray-500 pt-1 pl-1">
+        <div className="relative flex items-center gap-2 text-xs text-muted-foreground pt-1 pl-1">
           <motion.div
             className="flex"
             key={echoCount}

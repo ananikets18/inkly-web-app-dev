@@ -69,7 +69,7 @@ export default function SideNav() {
 
   return (
     <aside
-      className={`isolate z-50 sticky top-[73px] hidden sm:block w-16 bg-white border-r border-gray-200 h-[calc(100vh-73px)] transition-transform duration-300 ${visible ? 'translate-x-0' : '-translate-x-24'}`}
+      className={`isolate z-50 sticky top-[73px] hidden sm:block w-16 bg-card border-r border-border h-[calc(100vh-73px)] transition-transform duration-300 ${visible ? 'translate-x-0' : '-translate-x-24'}`}
       role="complementary"
       aria-label="Side navigation"
     >
@@ -82,7 +82,7 @@ export default function SideNav() {
               size="icon"
               aria-describedby={`tooltip-${label.toLowerCase()}`}
               aria-label={label}
-              className={`w-10 h-10 text-gray-400 hover:text-purple-600 hover:bg-purple-50 ${pathname === href ? 'bg-purple-50 text-purple-600' : ''}`}
+              className={`w-10 h-10 text-gray-400 hover:text-purple-600 hover:bg-purple-50 ${pathname === href ? 'bg-purple-50 text-purple-600' : ''} dark:hover:bg-[#232136] dark:hover:text-purple-200 ${pathname === href ? 'dark:bg-[#232136] dark:text-purple-200' : ''}`}
               onMouseEnter={handleButtonHover}
               onClick={() => handleNavClick(href)}
               {...(pathname === href ? { 'aria-current': 'page' } : {})}
@@ -105,7 +105,7 @@ export default function SideNav() {
               size="icon"
               aria-describedby={`tooltip-${label.toLowerCase()}`}
               aria-label={label}
-              className={`w-10 h-10 text-gray-400 hover:text-purple-600 hover:bg-purple-50 ${pathname === href ? 'bg-purple-50 text-purple-600' : ''}`}
+              className={`w-10 h-10 text-gray-400 hover:text-purple-600 hover:bg-purple-50 ${pathname === href ? 'bg-purple-50 text-purple-600' : ''} dark:hover:bg-[#232136] dark:hover:text-purple-200 ${pathname === href ? 'dark:bg-[#232136] dark:text-purple-200' : ''}`}
               onMouseEnter={handleButtonHover}
               onClick={() => handleNavClick(href)}
               {...(pathname === href ? { 'aria-current': 'page' } : {})}

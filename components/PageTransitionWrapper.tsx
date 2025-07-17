@@ -33,4 +33,4 @@ export default function PageTransitionWrapper({ children }: { children: React.Re
       </motion.div>
     </AnimatePresence>
   );
-} 
+}

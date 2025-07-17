@@ -109,4 +109,4 @@ export default function PerformanceMonitor({ cardCount, isVisible = false }: Per
       </div>
     </div>
   );
-} 
+}

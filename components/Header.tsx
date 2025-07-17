@@ -11,6 +11,7 @@ import Logo from "@/components/logo"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import JoinModal from "./JoinModal";
 
 const navItems = [
   { icon: Home, label: "Home" },
@@ -37,7 +38,7 @@ const searchPrompts = [
   "Love that feels like home",
 ]
 
-export default function Header() {
+export default function Header({ leftAction }: { leftAction?: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { playSound, isMuted, isInitialized, toggleMute } = useSoundEffects()
@@ -49,6 +50,7 @@ export default function Header() {
     style: [],
   })
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [isJoinOpen, setIsJoinOpen] = useState(false);
 
   // Smart show/hide on scroll (like BottomNav)
   const [visible, setVisible] = useState(true)
@@ -129,11 +131,12 @@ export default function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3 h-[73px] flex items-center justify-between transition-transform duration-300 ${visible ? "translate-y-0" : "-translate-y-24"}`}
+        className={`sticky top-0 z-40 bg-background border-b border-border px-4 py-3 h-[73px] flex items-center justify-between transition-transform duration-300 ${visible ? "translate-y-0" : "-translate-y-24"}`}
         role="banner"
         aria-label="Main navigation"
       >
         <div className="flex items-center w-full gap-3">
+          {leftAction}
           {isInkFullPage && (
             <Button
               variant="ghost"
@@ -159,7 +162,7 @@ export default function Header() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={handleSearchFocus}
                 placeholder="Search for an inspiration..."
-                className="w-full pl-4 pr-10 py-2 bg-gray-100 border-0 rounded-full focus:bg-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus:outline-none transition-all duration-300"
+                className="w-full pl-4 pr-10 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-full focus:bg-white dark:focus:bg-gray-900 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus:outline-none transition-all duration-300 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400"
                 aria-label="Search for an inspiration"
                 title="Search for inks and inspiration"
                 role="searchbox"
@@ -181,19 +184,6 @@ export default function Header() {
           </div>
 
           {/* Mobile Search Icon */}
-          <div className="lg:hidden ml-auto mr-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMobileSearch}
-              onMouseEnter={handleButtonHover}
-              className="text-gray-600 hover:text-purple-600 focus-visible:ring-purple-500"
-              title="Search"
-              aria-label="Open search page"
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-          </div>
 
           <div
             className="flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0"
@@ -205,7 +195,7 @@ export default function Header() {
               aria-label="Create Ink"
               title="Create new ink"
               onMouseEnter={handleButtonHover}
-              onClick={() => handleButtonClick("click")}
+              onClick={() => { handleButtonClick("click"); router.push("/create"); }}
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
               <span className="text-xs md:text-sm lg:text-base">Create</span>
@@ -216,7 +206,7 @@ export default function Header() {
               aria-label="Join Inkly"
               title="Join Inkly community"
               onMouseEnter={handleButtonHover}
-              onClick={() => handleButtonClick("follow")}
+              onClick={() => { handleButtonClick("follow"); setIsJoinOpen(true); }}
             >
               <UserPlus className="w-4 h-4" aria-hidden="true" />
               <span className="text-xs md:text-sm lg:text-base">Join</span>
@@ -232,20 +222,20 @@ export default function Header() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 backdrop-blur-sm"
             onClick={handleSearchClose}
           >
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-white/95 backdrop-blur-xl border-b border-gray-200 shadow-xl"
+              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 shadow-xl text-gray-900 dark:text-gray-100"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="max-w-4xl mx-auto px-6 py-6">
                 {/* Search Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Search Inkly</h2>
+                  <h2 className="text-xl font-semibold text-foreground">Search Inkly</h2>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -258,12 +248,12 @@ export default function Header() {
 
                 {/* Enhanced Search Bar */}
                 <form onSubmit={handleSearchSubmit} className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="What are you feeling today?"
-                    className="pl-12 pr-4 py-4 text-lg bg-white border-gray-300 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="pl-12 pr-4 py-4 text-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:focus:border-purple-400 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400"
                     autoFocus
                   />
                 </form>
@@ -272,7 +262,7 @@ export default function Header() {
                 <div className="space-y-4 mb-6">
                   {Object.entries(filterCategories).map(([category, filters]) => (
                     <div key={category} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-600 capitalize min-w-[60px]">{category}:</span>
+                      <span className="text-sm font-medium text-muted-foreground capitalize min-w-[60px]">{category}:</span>
                       <div className="flex gap-2 overflow-x-auto pb-1">
                         {filters.slice(0, 4).map((filter) => (
                           <Badge
@@ -295,7 +285,7 @@ export default function Header() {
 
                 {/* Search Prompts */}
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-3">Popular searches:</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Popular searches:</p>
                   <div className="flex flex-wrap gap-2">
                     {searchPrompts.slice(0, 3).map((prompt, index) => (
                       <Button
@@ -343,6 +333,7 @@ export default function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+      <JoinModal open={isJoinOpen} onOpenChange={setIsJoinOpen} />
     </>
   )
 }

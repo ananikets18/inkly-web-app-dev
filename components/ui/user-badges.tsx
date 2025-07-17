@@ -10,7 +10,7 @@ interface AvatarBadgeProps {
   className?: string;
 }
 
-const badgeConfig = {
+export const badgeConfig = {
   creator: {
     label: 'Creator',
     colors: 'bg-purple-100 text-purple-800 border-purple-200',

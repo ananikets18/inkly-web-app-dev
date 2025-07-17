@@ -11,9 +11,12 @@ type FollowButtonProps = {
   isFollowing: boolean;
   isLoading: boolean;
   followIntent: FollowIntent;
+  className?: string;
+  onFollowed?: () => void;
+  onUnfollowed?: () => void;
 };
 
-const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent }: FollowButtonProps) => {
+const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent, className }: FollowButtonProps) => {
   let label = "Follow";
 
   if (isLoading) {
@@ -29,11 +32,11 @@ const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent }: Follow
             onClick={onFollow}
             aria-label={label}
             role="button"
-            className={`flex items-center gap-1 rounded-full border text-xs font-semibold transition-all duration-200 h-auto px-3 py-1
-              ${isFollowing
-                ? "bg-purple-100 border-purple-200 text-purple-800 hover:bg-purple-200"
-                : "bg-purple-100 text-purple-500 border-purple-200 hover:bg-purple-200"}
-              ${isLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+      className={`flex items-center gap-0 rounded-full text-xs font-semibold transition-all duration-200 h-auto px-4 py-1.5
+          bg-[#fff] border border-[#e9d5ff] text-purple-500   
+          dark:bg-[#181022] dark:border-[#6d28d9] dark:text-purple-200
+          ${isLoading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#9333ea] hover:text-white active:bg-[#7e22ce] dark:hover:bg-[#6d28d9] dark:hover:text-white dark:active:bg-[#581c87]"}
+          ${className || ""}`}
             title={isLoading ? (followIntent === "unfollow" ? "Unfollowing..." : "Following...") : (isFollowing ? "Unfollow this user" : "Follow this user")}
             aria-pressed={isFollowing}
             aria-busy={isLoading}
@@ -47,13 +50,11 @@ const FollowButton = ({ onFollow, isFollowing, isLoading, followIntent }: Follow
             transition={{ duration: 0.2 }}
             className="inline-flex items-center gap-1"
           >
-            {label === "Following" && <Check className="w-4 h-4 text-purple-800" aria-hidden="true" />}
+          {label === "Following" && <Check className="w-4 h-4 text-[#9333ea] dark:text-purple-200" aria-hidden="true" />}
             <span>{label}</span>
           </motion.span>
         </AnimatePresence>
       </Button>
-
-
     );
 };
 

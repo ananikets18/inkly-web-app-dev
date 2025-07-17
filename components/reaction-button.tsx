@@ -28,7 +28,7 @@ export const reactions: Reaction[] = [
     label: "Love",
     color: "text-pink-500",
     hoverColor: "hover:text-pink-600",
-    bgColor: "hover:bg-pink-50",
+    bgColor: "hover:bg-pink-50 dark:hover:bg-pink-900",
     sound: "like",
     animation: { scale: 1.2, rotate: [0, -10, 10, 0] },
   },
@@ -38,7 +38,7 @@ export const reactions: Reaction[] = [
     label: "Felt That",
     color: "text-purple-500",
     hoverColor: "hover:text-purple-600",
-    bgColor: "hover:bg-purple-50",
+    bgColor: "hover:bg-purple-50 dark:hover:bg-purple-900",
     sound: "hover",
     animation: { scale: 1.3 },
   },
@@ -48,7 +48,7 @@ export const reactions: Reaction[] = [
     label: "Relatable",
     color: "text-yellow-600",
     hoverColor: "hover:text-yellow-700",
-    bgColor: "hover:bg-yellow-50",
+    bgColor: "hover:bg-yellow-50 dark:hover:bg-yellow-900",
     sound: "click",
     animation: { scale: 1.1, rotate: [0, 5, -5, 0] },
   },
@@ -58,7 +58,7 @@ export const reactions: Reaction[] = [
     label: "Haunted",
     color: "text-gray-600",
     hoverColor: "hover:text-gray-700",
-    bgColor: "hover:bg-gray-50",
+    bgColor: "hover:bg-gray-50 dark:hover:bg-gray-800",
     sound: "hover",
     animation: { scale: 1.2, rotate: [0, -4, 4, 0] },
   },
@@ -68,7 +68,7 @@ export const reactions: Reaction[] = [
     label: "Wow",
     color: "text-blue-500",
     hoverColor: "hover:text-blue-600",
-    bgColor: "hover:bg-blue-50",
+    bgColor: "hover:bg-blue-50 dark:hover:bg-blue-900",
     sound: "like",
     animation: { scale: 1.25 },
   },
@@ -260,7 +260,7 @@ export default function ReactionButton({
                 isMobile ? "bottom-full mt-3" : "bottom-full mb-3"
               }`}
             >
-              <div className="relative bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-full px-3 py-2 flex flex-row gap-2">
+              <div className="relative bg-white/80 backdrop-blur-md border border-gray-200 shadow-xl rounded-full px-3 py-2 flex flex-row gap-2 dark:bg-[#181022]/90 dark:border-gray-700">
                 {reactions.map((reaction, index) => {
                   const Icon = reaction.icon;
                   const isSelected = selectedReaction === reaction.id;

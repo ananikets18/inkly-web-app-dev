@@ -129,4 +129,4 @@ export default function MoreToExploreMasonry() {
       </div>
     </section>
   );
-} 
+}

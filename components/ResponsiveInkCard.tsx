@@ -115,7 +115,6 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
     setBookmarkCountLocal((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
     if (next) {
       setShowEchoAnim(true);
-      playSound("success");
     }
     setBookmarkMessage(next ? "Saved to your inspirations ✨" : "Removed from bookmarks 🗂️");
     props.onBookmark?.();
