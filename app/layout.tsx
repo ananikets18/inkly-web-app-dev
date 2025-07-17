@@ -5,6 +5,8 @@ import { GeistSans } from 'geist/font/sans';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { FeedProvider } from "../hooks/feed-context";
 import ClientRoot from "../components/ClientRoot";
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "Inkly - A Place",
@@ -18,20 +20,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#9333ea" />
+      </head>
       <body className={GeistSans.className}>
-        <ClientRoot>
-          <FeedProvider>
-            <TooltipProvider>
-              {/*
-                For best UX, keep transitions and animations local to each page/component.
-                If you want to reintroduce subtle, non-blocking transitions globally, wrap children in a lightweight transition component here.
-                Example: <motion.div>{children}</motion.div> with a very short fade, but avoid blocking navigation or double-animating.
-              */}
-              {children}
-            </TooltipProvider>
-          </FeedProvider>
-        </ClientRoot>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ClientRoot>
+            <FeedProvider>
+              <TooltipProvider>
+                {/*
+                  For best UX, keep transitions and animations local to each page/component.
+                  If you want to reintroduce subtle, non-blocking transitions globally, wrap children in a lightweight transition component here.
+                  Example: <motion.div>{children}</motion.div> with a very short fade, but avoid blocking navigation or double-animating.
+                */}
+                {children}
+                <Toaster />
+              </TooltipProvider>
+            </FeedProvider>
+          </ClientRoot>
+        </ThemeProvider>
       </body>
     </html>
   );
