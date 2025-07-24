@@ -110,14 +110,8 @@ export default function ProgressAchievementsSidebar({
           </div>
 
           {/* Animated Progress Bar */}
-          <div className="relative">
-            <Progress value={xpProgress} className="h-3 bg-gray-200/50 dark:bg-gray-800/50" />
-            <motion.div
-              className="absolute top-0 left-0 h-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${xpProgress}%` }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-            />
+          <div className="relative w-full max-w-full mx-auto">
+            <Progress value={xpProgress} className="h-3 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
           </div>
 
           <div className="text-center">

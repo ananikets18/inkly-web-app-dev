@@ -12,6 +12,7 @@ import DeepDives from "../../components/explore/DeepDives"
 import YouMayResonateWith from "../../components/explore/YouMayResonateWith"
 import TopicUniverses from "../../components/explore/TopicUniverses"
 import WhatsNewOnInkly from "../../components/explore/WhatsNewOnInkly"
+import Footer from "@/components/Footer"
 
 export default function ExplorePage() {
   const [mounted, setMounted] = useState(false)
@@ -109,9 +110,7 @@ export default function ExplorePage() {
         </main>
       </div>
       <BottomNav />
-      <footer className="w-full text-center text-xs text-muted-foreground py-4 bg-background/80 border-t border-border mt-2">
-        © {new Date().getFullYear()} Inkly. All rights reserved.
-      </footer>
+      <Footer />
     </div>
   )
 }

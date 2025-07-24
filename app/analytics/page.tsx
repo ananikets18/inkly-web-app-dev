@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import { BarChart3, Sparkles } from "lucide-react"
 import Header from "@/components/Header"
 import SideNav from "@/components/SideNav"
 import BottomNav from "@/components/BottomNav"
@@ -16,6 +18,7 @@ import StreakTracker from "@/components/analytics/StreakTracker"
 import TotalInksPosted from "@/components/analytics/TotalInksPosted"
 import AvgWordCount from "@/components/analytics/AvgWordCount"
 import ExplorerPath from "@/components/analytics/ExplorerPath"
+import Footer from "@/components/Footer"
 
 const TABS = [
   { label: "Overview", value: "overview", desc: "Echo summary and XP progress" },
@@ -71,14 +74,14 @@ function getDynamicGreeting() {
 
   const messages = [
     `${timeGreeting}, Inkly Creator!`,
-    "Hope you’re having a creative day!",
-    "Let’s see how your words are inspiring others!",
+    "Hope you're having a creative day!",
+    "Let's see how your words are inspiring others!",
     "Your quotes are making waves!",
     "Ready to check your Inkly journey?",
     "Welcome, storyteller!",
     "Keep spreading inspiration!",
     "Your creativity is contagious!",
-    "Every ink counts—let’s see your impact!",
+    "Every ink counts—let's see your impact!",
   ]
   return messages[Math.floor(Math.random() * messages.length)]
 }
@@ -98,6 +101,68 @@ function timeAgo(date: Date): string {
   if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`
   const days = Math.floor(hours / 24)
   return `${days} day${days > 1 ? "s" : ""} ago`
+}
+
+// Hero Section Component
+function AnalyticsHeroSection() {
+  return (
+    <section className="relative py-16 px-4 sm:px-6 lg:px-8 overflow-hidden w-full" aria-labelledby="hero-heading">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950/20 dark:via-background dark:to-orange-950/20" />
+
+      {/* Floating particles/ambient elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full opacity-60"
+          animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-32 right-16 w-1 h-1 bg-orange-400 rounded-full opacity-40"
+          animate={{ y: [0, -15, 0], opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-1/4 w-1.5 h-1.5 bg-teal-400 rounded-full opacity-50"
+          animate={{ y: [0, -10, 0], opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }}
+        />
+      </div>
+
+      <div className="relative max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <h1
+            id="hero-heading"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-purple-500 to-orange-500 mb-6 leading-tight"
+          >
+            Analytics Dashboard
+          </h1>
+          <motion.p
+            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          >
+            Track your impact and see how your words inspire the world
+          </motion.p>
+          <motion.div
+            className="flex items-center justify-center gap-2 mt-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          >
+            <BarChart3 className="w-5 h-5 text-purple-500" aria-hidden="true" />
+            <span className="text-sm text-muted-foreground font-medium">Your creative insights await</span>
+            <Sparkles className="w-5 h-5 text-orange-500" aria-hidden="true" />
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  )
 }
 
 export default function AnalyticsDashboard() {
@@ -134,162 +199,129 @@ export default function AnalyticsDashboard() {
           <SideNav />
         </nav>
         {/* Main Content */}
-        <main
-          className="flex-1 w-full px-0 md:px-5 py-4 md:py-10 text-xs md:text-sm"
-          aria-label="Analytics dashboard main content"
-        >
-          <div className="max-w-7xl mx-auto">
-            {/* Title and Subtitle Section (like notifications) */}
-            <div className="px-3 md:px-0 pb-6 md:pb-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border gap-0 sm:gap-0">
-              <div className="pl-2 py-3 mb-0 flex-1">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tracking-tight">
-                  Analytics
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">See how your words are making an impact</p>
-                {/* Last updated on mobile */}
-                <div className="flex flex-col gap-0.5 w-full mt-4 sm:hidden">
-                  {loading ? (
-                    <Skeleton className="w-20 h-3 mb-1" />
-                  ) : lastUpdated ? (
-                    <>
-                      <div className="text-xs text-muted-foreground">Last updated</div>
-                      <div className="text-xs font-medium text-foreground" aria-live="polite">
-                        {timeAgo(lastUpdated)}
-                      </div>
-                    </>
-                  ) : null}
+        <main className="flex-1 w-full" aria-label="Analytics dashboard main content">
+          {/* Hero Section */}
+          <AnalyticsHeroSection />
+
+          {/* Dashboard Content */}
+          <div className="px-0 md:px-5 py-4 md:py-10 text-xs md:text-sm">
+            <div className="max-w-7xl mx-auto">
+              {/* Tabs */}
+              <nav
+                className="mb-6 flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide px-3 md:px-0"
+                aria-label="Analytics dashboard tabs"
+                role="tablist"
+              >
+                {TABS.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setTab(t.value)}
+                    className={`px-3 py-1 rounded-full font-medium text-xs md:text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-300 ${
+                      tab === t.value
+                        ? "bg-purple-600 text-white shadow-md"
+                        : "bg-card text-muted-foreground hover:bg-muted"
+                    }`}
+                    disabled={loading}
+                    aria-label={t.label}
+                    aria-selected={tab === t.value}
+                    aria-controls={`tabpanel-${t.value}`}
+                    role="tab"
+                    title={t.desc}
+                    tabIndex={tab === t.value ? 0 : -1}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Tab Content Skeleton Loader */}
+              {loading ? (
+                <div className="space-y-6 md:space-y-8 px-3 md:px-0">
+                  <Skeleton className="w-full h-32 rounded-2xl" />
+                  <Skeleton className="w-full h-32 rounded-2xl" />
+                  <Skeleton className="w-full h-32 rounded-2xl" />
                 </div>
-              </div>
-              {/* Last updated on desktop */}
-              <div className="hidden sm:flex flex-col gap-0.5 text-right min-w-[70px] mt-0">
-                {loading ? (
-                  <Skeleton className="w-20 h-3 mb-1" />
-                ) : lastUpdated ? (
-                  <>
-                    <div className="text-xs text-muted-foreground">Last updated</div>
-                    <div className="text-xs font-medium text-foreground" aria-live="polite">
-                      {timeAgo(lastUpdated)}
-                    </div>
-                  </>
-                ) : null}
-              </div>
+              ) : (
+                <div className="space-y-6 md:space-y-8 px-3 md:px-0">
+                  {tab === "overview" && (
+                    <section id="tabpanel-overview" role="tabpanel" aria-labelledby="overview" tabIndex={0}>
+                      {/* New Analytics Components */}
+                      <div className="space-y-6 md:space-y-8 mb-8">
+                        {/* XP and Streak Row */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="rounded-2xl bg-card p-4 md:p-6">
+                            <XPOverTime />
+                          </div>
+                          <div className="rounded-2xl bg-card p-4 md:p-6">
+                            <StreakTracker />
+                          </div>
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div className="rounded-2xl bg-card p-4 md:p-6">
+                            <TotalInksPosted />
+                          </div>
+                          <div className="rounded-2xl bg-card p-4 md:p-6">
+                            <AvgWordCount />
+                          </div>
+                        </div>
+
+                        {/* Explorer Path */}
+                        <div className="rounded-2xl bg-card p-4 md:p-6">
+                          <ExplorerPath />
+                        </div>
+                      </div>
+
+                      {/* Existing Components */}
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="rounded-2xl bg-card p-4 md:p-6">
+                          <EchoSummary />
+                        </div>
+                        <div className="rounded-2xl bg-card p-4 md:p-6">
+                          <XPBadgeProgress />
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                  {tab === "sentiment" && (
+                    <section id="tabpanel-sentiment" role="tabpanel" aria-labelledby="sentiment" tabIndex={0}>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <SentimentTimeline />
+                      </div>
+                    </section>
+                  )}
+                  {tab === "journey" && (
+                    <section id="tabpanel-journey" role="tabpanel" aria-labelledby="journey" tabIndex={0}>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <InkMilestones />
+                      </div>
+                    </section>
+                  )}
+                  {tab === "topinks" && (
+                    <section id="tabpanel-topinks" role="tabpanel" aria-labelledby="topinks" tabIndex={0}>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <TopInks />
+                      </div>
+                    </section>
+                  )}
+                  {tab === "audience" && (
+                    <section id="tabpanel-audience" role="tabpanel" aria-labelledby="audience" tabIndex={0}>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <AudienceSnapshot />
+                      </div>
+                    </section>
+                  )}
+                  {tab === "reflections" && (
+                    <section id="tabpanel-reflections" role="tabpanel" aria-labelledby="reflections" tabIndex={0}>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <ReflectionSpread />
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
             </div>
-
-            {/* Tabs */}
-            <nav
-              className="mb-6 flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide"
-              aria-label="Analytics dashboard tabs"
-              role="tablist"
-            >
-              {TABS.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => setTab(t.value)}
-                  className={`px-3 py-1 rounded-full font-medium text-xs md:text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-300 ${
-                    tab === t.value
-                      ? "bg-purple-600 text-white shadow-md"
-                      : "bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                  disabled={loading}
-                  aria-label={t.label}
-                  aria-selected={tab === t.value}
-                  aria-controls={`tabpanel-${t.value}`}
-                  role="tab"
-                  title={t.desc}
-                  tabIndex={tab === t.value ? 0 : -1}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Tab Content Skeleton Loader */}
-            {loading ? (
-              <div className="space-y-6 md:space-y-8">
-                <Skeleton className="w-full h-32 rounded-2xl" />
-                <Skeleton className="w-full h-32 rounded-2xl" />
-                <Skeleton className="w-full h-32 rounded-2xl" />
-              </div>
-            ) : (
-              <div className="space-y-6 md:space-y-8">
-                {tab === "overview" && (
-                  <section id="tabpanel-overview" role="tabpanel" aria-labelledby="overview" tabIndex={0}>
-                    {/* New Analytics Components */}
-                    <div className="space-y-6 md:space-y-8 mb-8">
-                      {/* XP and Streak Row */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <XPOverTime />
-                        </div>
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <StreakTracker />
-                        </div>
-                      </div>
-
-                      {/* Stats Row */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <TotalInksPosted />
-                        </div>
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <AvgWordCount />
-                        </div>
-                      </div>
-
-                      {/* Explorer Path */}
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <ExplorerPath />
-                      </div>
-                    </div>
-
-                    {/* Existing Components */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <EchoSummary />
-                      </div>
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <XPBadgeProgress />
-                      </div>
-                    </div>
-                  </section>
-                )}
-                {tab === "sentiment" && (
-                  <section id="tabpanel-sentiment" role="tabpanel" aria-labelledby="sentiment" tabIndex={0}>
-                    <div className="rounded-2xl bg-card p-4 md:p-6">
-                      <SentimentTimeline />
-                    </div>
-                  </section>
-                )}
-                {tab === "journey" && (
-                  <section id="tabpanel-journey" role="tabpanel" aria-labelledby="journey" tabIndex={0}>
-                    <div className="rounded-2xl bg-card p-4 md:p-6">
-                      <InkMilestones />
-                    </div>
-                  </section>
-                )}
-                {tab === "topinks" && (
-                  <section id="tabpanel-topinks" role="tabpanel" aria-labelledby="topinks" tabIndex={0}>
-                    <div className="rounded-2xl bg-card p-4 md:p-6">
-                      <TopInks />
-                    </div>
-                  </section>
-                )}
-                {tab === "audience" && (
-                  <section id="tabpanel-audience" role="tabpanel" aria-labelledby="audience" tabIndex={0}>
-                    <div className="rounded-2xl bg-card p-4 md:p-6">
-                      <AudienceSnapshot />
-                    </div>
-                  </section>
-                )}
-                {tab === "reflections" && (
-                  <section id="tabpanel-reflections" role="tabpanel" aria-labelledby="reflections" tabIndex={0}>
-                    <div className="rounded-2xl bg-card p-4 md:p-6">
-                      <ReflectionSpread />
-                    </div>
-                  </section>
-                )}
-              </div>
-            )}
           </div>
         </main>
       </div>
@@ -297,6 +329,7 @@ export default function AnalyticsDashboard() {
       <nav className="block sticky bottom-0 z-50" aria-label="Bottom navigation" role="navigation">
         <BottomNav />
       </nav>
+      <Footer />
     </div>
   )
 }

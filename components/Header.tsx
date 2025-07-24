@@ -3,15 +3,16 @@
 import type React from "react"
 
 import { useRouter, usePathname } from "next/navigation"
-import { Plus, Search, UserPlus, Home, Compass, User, HelpCircle, Info, ArrowLeft, X } from "lucide-react"
+import { Plus, Search, UserPlus, Home, Compass, User, HelpCircle, Info, ArrowLeft, X, Hash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Logo from "@/components/logo"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import JoinModal from "./JoinModal";
+import JoinModal from "./JoinModal"
 
 const navItems = [
   { icon: Home, label: "Home" },
@@ -24,18 +25,32 @@ const supportItems = [
   { icon: Info, label: "About" },
 ]
 
-const filterCategories = {
-  mood: ["Uplifting", "Melancholic", "Dreamy", "Peaceful", "Romantic", "Healing"],
-  theme: ["Love", "Growth", "Beauty", "Wisdom", "Self-Discovery", "Healing"],
-  style: ["Minimal", "Poetic", "Metaphorical", "Wisdom", "Raw", "Elegant"],
-}
+// Popular search suggestions
+const popularSearches = ["love quotes", "motivation", "self care", "poetry", "wisdom"]
 
-const searchPrompts = [
-  "How do I find peace in chaos?",
-  "Words for a broken heart",
-  "Motivation for Monday morning",
-  "Something about growing up",
-  "Love that feels like home",
+// Mock data for search suggestions
+const mockInks = [
+  { id: 1, content: "The best way to predict the future is to create it", author: "sarah_mitchell" },
+  { id: 2, content: "In the middle of difficulty lies opportunity", author: "alex_thompson" },
+  { id: 3, content: "Life is what happens to you while you're busy making other plans", author: "maya_chen" },
+  { id: 4, content: "The only way to do great work is to love what you do", author: "jordan_kim" },
+  { id: 5, content: "Innovation distinguishes between a leader and a follower", author: "mike_rodriguez" },
+]
+
+const mockUsers = [
+  { id: 1, username: "sarah_mitchell", displayName: "Sarah Mitchell", avatar: "SM" },
+  { id: 2, username: "alex_thompson", displayName: "Alex Thompson", avatar: "AT" },
+  { id: 3, username: "maya_chen", displayName: "Maya Chen", avatar: "MC" },
+  { id: 4, username: "jordan_kim", displayName: "Jordan Kim", avatar: "JK" },
+  { id: 5, username: "mike_rodriguez", displayName: "Mike Rodriguez", avatar: "MR" },
+]
+
+const mockHashtags = [
+  { id: 1, name: "motivation", count: 1234 },
+  { id: 2, name: "love", count: 987 },
+  { id: 3, name: "wisdom", count: 756 },
+  { id: 4, name: "poetry", count: 543 },
+  { id: 5, name: "selfcare", count: 432 },
 ]
 
 export default function Header({ leftAction }: { leftAction?: React.ReactNode }) {
@@ -44,13 +59,15 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
   const { playSound, isMuted, isInitialized, toggleMute } = useSoundEffects()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedFilters, setSelectedFilters] = useState<{ [key: string]: string[] }>({
-    mood: [],
-    theme: [],
-    style: [],
-  })
+  const [searchResults, setSearchResults] = useState<{
+    inks: typeof mockInks
+    users: typeof mockUsers
+    hashtags: typeof mockHashtags
+  }>({ inks: [], users: [], hashtags: [] })
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [isJoinOpen, setIsJoinOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const [isJoinOpen, setIsJoinOpen] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
 
   // Smart show/hide on scroll (like BottomNav)
   const [visible, setVisible] = useState(true)
@@ -72,16 +89,102 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Close search overlay on escape key
+  // Close search overlay on escape key or outside click
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isSearchFocused) {
         setIsSearchFocused(false)
+        setSelectedIndex(-1)
       }
     }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false)
+        setSelectedIndex(-1)
+      }
+    }
+
     document.addEventListener("keydown", handleEscape)
-    return () => document.removeEventListener("keydown", handleEscape)
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("keydown", handleEscape)
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
   }, [isSearchFocused])
+
+  // Real-time search functionality
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+
+      // Filter inks
+      const filteredInks = mockInks
+        .filter((ink) => ink.content.toLowerCase().includes(query) || ink.author.toLowerCase().includes(query))
+        .slice(0, 3)
+
+      // Filter users
+      const filteredUsers = mockUsers
+        .filter((user) => user.username.toLowerCase().includes(query) || user.displayName.toLowerCase().includes(query))
+        .slice(0, 3)
+
+      // Filter hashtags
+      const filteredHashtags = mockHashtags.filter((hashtag) => hashtag.name.toLowerCase().includes(query)).slice(0, 3)
+
+      setSearchResults({
+        inks: filteredInks,
+        users: filteredUsers,
+        hashtags: filteredHashtags,
+      })
+    } else {
+      setSearchResults({ inks: [], users: [], hashtags: [] })
+    }
+  }, [searchQuery])
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isSearchFocused) return
+
+    const totalResults = searchResults.inks.length + searchResults.users.length + searchResults.hashtags.length
+    const hasPopularSearches = !searchQuery.trim() && popularSearches.length > 0
+    const maxIndex = hasPopularSearches ? popularSearches.length - 1 : totalResults - 1
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev < maxIndex ? prev + 1 : prev))
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setSelectedIndex((prev) => (prev > -1 ? prev - 1 : prev))
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault()
+      if (hasPopularSearches) {
+        handlePopularSearchClick(popularSearches[selectedIndex])
+      } else {
+        // Handle selection of search results
+        handleSearchResultSelect(selectedIndex)
+      }
+    }
+  }
+
+  const handleSearchResultSelect = (index: number) => {
+    const currentIndex = 0
+
+    if (index < searchResults.inks.length) {
+      const ink = searchResults.inks[index]
+      router.push(`/ink/${ink.id}`)
+    } else if (index < searchResults.inks.length + searchResults.users.length) {
+      const userIndex = index - searchResults.inks.length
+      const user = searchResults.users[userIndex]
+      router.push(`/profile/${user.username}`)
+    } else {
+      const hashtagIndex = index - searchResults.inks.length - searchResults.users.length
+      const hashtag = searchResults.hashtags[hashtagIndex]
+      router.push(`/search?hashtag=${hashtag.name}`)
+    }
+
+    setIsSearchFocused(false)
+    setSelectedIndex(-1)
+  }
 
   const handleButtonClick = (soundType: "click" | "like" | "follow" | "bookmark") => {
     playSound(soundType)
@@ -93,18 +196,13 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
 
   const handleSearchFocus = () => {
     setIsSearchFocused(true)
-    playSound("click")
+    // Removed playSound("click") to disable sound on search bar focus
   }
 
   const handleSearchClose = () => {
     setIsSearchFocused(false)
     setSearchQuery("")
-    setSelectedFilters({ mood: [], theme: [], style: [] })
-  }
-
-  const handleMobileSearch = () => {
-    playSound("click")
-    router.push("/search")
+    setSelectedIndex(-1)
   }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -112,26 +210,49 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
       setIsSearchFocused(false)
+      setSelectedIndex(-1)
     }
   }
 
-  const handleFilterToggle = (category: string, filter: string) => {
-    setSelectedFilters((prev) => ({
-      ...prev,
-      [category]: prev[category].includes(filter)
-        ? prev[category].filter((f) => f !== filter)
-        : [...prev[category], filter],
-    }))
+  const handlePopularSearchClick = (query: string) => {
+    setSearchQuery(query)
+    router.push(`/search?q=${encodeURIComponent(query)}`)
+    setIsSearchFocused(false)
+    setSelectedIndex(-1)
+  }
+
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text
+
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
+    const parts = text.split(regex)
+
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <mark
+          key={index}
+          className="bg-purple-100 dark:bg-purple-900/50 text-purple-900 dark:text-purple-100 px-1 rounded"
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      ),
+    )
   }
 
   // Only show back button on ink full page
   const isInkFullPage = /^\/ink\/[\w-]+$/.test(pathname || "")
   const isSearchPage = pathname === "/search"
 
+  const hasSearchResults =
+    searchResults.inks.length > 0 || searchResults.users.length > 0 || searchResults.hashtags.length > 0
+  const showPopularSearches = !searchQuery.trim()
+
   return (
     <>
       <header
-        className={`sticky top-0 z-40 bg-background border-b border-border px-4 py-3 h-[73px] flex items-center justify-between transition-transform duration-300 ${visible ? "translate-y-0" : "-translate-y-24"}`}
+        className={`sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 h-[73px] flex items-center justify-between transition-transform duration-300 ${visible ? "translate-y-0" : "-translate-y-24"}`}
         role="banner"
         aria-label="Main navigation"
       >
@@ -152,38 +273,205 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
 
           <Logo />
 
-          {/* Desktop Search Bar */}
-          <div className="hidden lg:flex flex-1 ml-4 relative">
+          {/* Search Container */}
+          <div className="hidden md:flex flex-1 ml-4 relative" ref={searchContainerRef}>
             <form onSubmit={handleSearchSubmit} className="w-full relative">
-              <Input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={handleSearchFocus}
-                placeholder="Search for an inspiration..."
-                className="w-full pl-4 pr-10 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-full focus:bg-white dark:focus:bg-gray-900 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus:outline-none transition-all duration-300 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400"
-                aria-label="Search for an inspiration"
-                title="Search for inks and inspiration"
-                role="searchbox"
-                aria-describedby="search-description"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                variant="ghost"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-purple-500"
-              >
-                <Search className="w-4 h-4" />
-              </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={handleSearchFocus}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search inks, users, or hashtags..."
+                  className="w-full pl-10 pr-10 py-2 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-full focus:bg-white dark:focus:bg-gray-800 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus:outline-none transition-all duration-300 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  aria-label="Search for inks, users, or hashtags"
+                  aria-expanded={isSearchFocused}
+                  aria-haspopup="listbox"
+                  role="combobox"
+                  aria-autocomplete="list"
+                />
+                {searchQuery && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 h-6 w-6"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
             </form>
 
-            <div id="search-description" className="sr-only">
-              Search through all inks and content on Inkly
-            </div>
-          </div>
+            {/* Search Dropdown */}
+            <AnimatePresence>
+              {isSearchFocused && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  role="listbox"
+                  aria-label="Search suggestions"
+                >
+                  {/* Popular Searches (when input is empty) */}
+                  {showPopularSearches && (
+                    <div className="p-4">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Popular searches</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {popularSearches.map((search, index) => (
+                          <Badge
+                            key={search}
+                            variant="secondary"
+                            className={`cursor-pointer transition-all duration-200 hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/50 dark:hover:text-purple-300 ${
+                              selectedIndex === index
+                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                : ""
+                            }`}
+                            onClick={() => handlePopularSearchClick(search)}
+                            role="option"
+                            aria-selected={selectedIndex === index}
+                          >
+                            {search}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-          {/* Mobile Search Icon */}
+                  {/* Search Results */}
+                  {hasSearchResults && (
+                    <div className="max-h-96 overflow-y-auto">
+                      {/* Inks Section */}
+                      {searchResults.inks.length > 0 && (
+                        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                            <Search className="w-4 h-4" />
+                            Inks
+                          </h3>
+                          <div className="space-y-2">
+                            {searchResults.inks.map((ink, index) => (
+                              <div
+                                key={ink.id}
+                                className={`p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                  selectedIndex === index ? "bg-gray-50 dark:bg-gray-800" : ""
+                                }`}
+                                onClick={() => router.push(`/ink/${ink.id}`)}
+                                role="option"
+                                aria-selected={selectedIndex === index}
+                              >
+                                <p className="text-sm text-gray-900 dark:text-gray-100 line-clamp-2">
+                                  {highlightText(ink.content, searchQuery)}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  by @{highlightText(ink.author, searchQuery)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Users Section */}
+                      {searchResults.users.length > 0 && (
+                        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            Users
+                          </h3>
+                          <div className="space-y-2">
+                            {searchResults.users.map((user, index) => {
+                              const userIndex = searchResults.inks.length + index
+                              return (
+                                <div
+                                  key={user.id}
+                                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                    selectedIndex === userIndex ? "bg-gray-50 dark:bg-gray-800" : ""
+                                  }`}
+                                  onClick={() => router.push(`/profile/${user.username}`)}
+                                  role="option"
+                                  aria-selected={selectedIndex === userIndex}
+                                >
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs">
+                                      {user.avatar}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                      {highlightText(user.displayName, searchQuery)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                      @{highlightText(user.username, searchQuery)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hashtags Section */}
+                      {searchResults.hashtags.length > 0 && (
+                        <div className="p-4">
+                          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                            <Hash className="w-4 h-4" />
+                            Hashtags
+                          </h3>
+                          <div className="space-y-2">
+                            {searchResults.hashtags.map((hashtag, index) => {
+                              const hashtagIndex = searchResults.inks.length + searchResults.users.length + index
+                              return (
+                                <div
+                                  key={hashtag.id}
+                                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                    selectedIndex === hashtagIndex ? "bg-gray-50 dark:bg-gray-800" : ""
+                                  }`}
+                                  onClick={() => router.push(`/search?hashtag=${hashtag.name}`)}
+                                  role="option"
+                                  aria-selected={selectedIndex === hashtagIndex}
+                                >
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                    <Hash className="w-4 h-4 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                      #{highlightText(hashtag.name, searchQuery)}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      {hashtag.count.toLocaleString()} inks
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No Results */}
+                  {searchQuery.trim() && !hasSearchResults && (
+                    <div className="p-8 text-center">
+                      <Search className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">No results found for "{searchQuery}"</p>
+                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                        Try different keywords or check your spelling
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div
             className="flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0"
@@ -191,148 +479,36 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
             aria-label="Account actions"
           >
             <Button
-              className="px-4 py-2 flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white border border-purple-600"
+              className="px-4 py-2 flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
               aria-label="Create Ink"
               title="Create new ink"
               onMouseEnter={handleButtonHover}
-              onClick={() => { handleButtonClick("click"); router.push("/create"); }}
+              onClick={() => {
+                handleButtonClick("click")
+                router.push("/create")
+              }}
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
-              <span className="text-xs md:text-sm lg:text-base">Create</span>
+              <span className="text-xs md:text-sm lg:text-base font-medium">Create</span>
             </Button>
             <Button
               variant="outline"
-              className="px-2 py-2 text-sm ml-1 flex items-center gap-2 rounded-full bg-transparent"
+              className="px-4 py-2 text-sm flex items-center gap-2 rounded-full bg-transparent border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
               aria-label="Join Inkly"
               title="Join Inkly community"
               onMouseEnter={handleButtonHover}
-              onClick={() => { handleButtonClick("follow"); setIsJoinOpen(true); }}
+              onClick={() => {
+                handleButtonClick("follow")
+                setIsJoinOpen(true)
+              }}
             >
               <UserPlus className="w-4 h-4" aria-hidden="true" />
-              <span className="text-xs md:text-sm lg:text-base">Join</span>
+              <span className="text-xs md:text-sm lg:text-base font-medium">Join</span>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Desktop Search Overlay */}
-      <AnimatePresence>
-        {isSearchFocused && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/50 dark:bg-black/70 backdrop-blur-sm"
-            onClick={handleSearchClose}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700 shadow-xl text-gray-900 dark:text-gray-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="max-w-4xl mx-auto px-6 py-6">
-                {/* Search Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-foreground">Search Inkly</h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleSearchClose}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-
-                {/* Enhanced Search Bar */}
-                <form onSubmit={handleSearchSubmit} className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="What are you feeling today?"
-                    className="pl-12 pr-4 py-4 text-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:focus:border-purple-400 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400"
-                    autoFocus
-                  />
-                </form>
-
-                {/* Quick Filters */}
-                <div className="space-y-4 mb-6">
-                  {Object.entries(filterCategories).map(([category, filters]) => (
-                    <div key={category} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-muted-foreground capitalize min-w-[60px]">{category}:</span>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {filters.slice(0, 4).map((filter) => (
-                          <Badge
-                            key={filter}
-                            variant={selectedFilters[category].includes(filter) ? "default" : "outline"}
-                            className={`cursor-pointer whitespace-nowrap transition-all duration-200 ${
-                              selectedFilters[category].includes(filter)
-                                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"
-                                : "hover:bg-purple-50 hover:border-purple-300"
-                            }`}
-                            onClick={() => handleFilterToggle(category, filter)}
-                          >
-                            {filter}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Search Prompts */}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-3">Popular searches:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {searchPrompts.slice(0, 3).map((prompt, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSearchQuery(prompt)
-                          router.push(`/search?q=${encodeURIComponent(prompt)}`)
-                          setIsSearchFocused(false)
-                        }}
-                        className="bg-gray-50 hover:bg-purple-50 hover:border-purple-300 rounded-full text-sm"
-                      >
-                        {prompt}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-                  <Button
-                    variant="ghost"
-                    onClick={() => router.push("/search")}
-                    className="text-purple-600 hover:text-purple-700"
-                  >
-                    Advanced Search
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleSearchClose}>
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      onClick={handleSearchSubmit}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                      disabled={!searchQuery.trim()}
-                    >
-                      Search
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <JoinModal open={isJoinOpen} onOpenChange={setIsJoinOpen} />
     </>
   )

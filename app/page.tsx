@@ -16,7 +16,7 @@ import FeedLoader from "../components/FeedLoader";
 import { useOptimizedLoading } from "../hooks/useOptimizedLoading";
 import PerformanceMonitor from "../components/PerformanceMonitor";
 import { generateRandomInkId } from "@/utils/random-ink-id";
-import { getTagsAndMood } from "@/utils/getTagsAndMood";
+// import { getTagsAndMood } from "@/utils/getTagsAndMood";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Flame } from "lucide-react";
 
@@ -226,7 +226,7 @@ Endless, wild, and beautifully free.`,
         const readingTime = calculateReadingTime(content).text;
         const views = Math.floor(Math.random() * 1000) + 100; // mock views
         const username = `@${author.toLowerCase().replace(/\s+/g, "_")}`;
-        const { tags, mood } = getTagsAndMood(content);
+        // const { tags, mood } = getTagsAndMood(content);
         return {
           id,
           content,
@@ -239,8 +239,8 @@ Endless, wild, and beautifully free.`,
           readingTime,
           views,
           username,
-          tags,
-          mood,
+          // tags,
+          // mood,
         };
       });
       localStorage.setItem('inkly-inks', JSON.stringify(inks));

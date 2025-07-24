@@ -52,4 +52,4 @@ export function BadgeDemo() {
 
 // TODO: Connect to backend API for real-time updates and data validation.
 // TODO: Implement optimistic UI with rollback on error.
-// TODO: Add backend-side rate limiting and abuse prevention. 
+// TODO: Add backend-side rate limiting and abuse prevention.

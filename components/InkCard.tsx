@@ -1,399 +1,357 @@
-"use client";
+"use client"
 
-import React from "react";
-import { useState, useEffect, useCallback } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Bookmark, Clock, Eye } from "lucide-react";
-import ReactionButton from "@/components/reaction-button";
-import { truncate } from "@/utils/truncate";
-import { formatCount } from "@/utils/formatCount";
-import BookmarkToast from "../components/BookmarkToast";
-import FollowToast from "../components/FollowToast";
-import FollowButton from "./FollowButton";
-import MoreOptionsDropdown from "./MoreOptionsDropdown";
-import ReportModal from "./ReportModal";
-import ReflectModal from "./ReflectModal";
-import EchoPile from "./EchoPile";
-import EchoBurst from "@/components/EchoBurst";
-import { AnimatePresence, motion } from "framer-motion";
-import { UserBadge, VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName } from "./ui/user-badges";
-import { AvatarBadge } from "./ui/user-badges";
-import { useSoundEffects } from "../hooks/use-sound-effects";
-import Link from "next/link";
-import FloatingToast from "../components/FloatingToast";
-import UserHoverCard from "./UserHoverCard";
+import type React from "react"
+
+import { useState, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, Eye, Pin } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { formatTimeAgo } from "@/utils/formatTimeAgo"
+import { formatCount } from "@/utils/formatCount"
+import { truncate } from "@/utils/truncate"
+import { detectInkType } from "@/utils/detectInkType"
+import MoreOptionsDropdown from "./MoreOptionsDropdown"
+import ShareModal from "./ShareModal"
+import ReflectModal from "./ReflectModal"
+import { useSoundEffects } from "@/hooks/useSoundEffects"
+import Link from "next/link"
 
 interface InkCardProps {
-  id: number;
-  content: string;
-  author: string;
-  avatarColor: string;
-  isLong?: boolean;
-  reaction?: { reaction: string; count: number };
-  bookmarkCount: number;
-  baseEchoCount: number;
-  onClick: () => void;
-  onHover: () => void;
-  onReact?: (reactionId: string | null) => void;
-  onBookmark: () => void;
-  onShare: () => void;
-  onFollow: () => void;
-  views: number;
-  reactionCount: number;
-  reflectionCount: number;
-  readingTime: { text: string; minutes: number };
-  shareCount?: number;
-  shareUrl: string;
-  animateBookmark: boolean;
-  setAnimateBookmark: (value: boolean) => void;
-  bookmarked: boolean;
-  bookmarkLocked: boolean;
-  setBookmarkLocked: (value: boolean) => void;
-  bookmarkMessage: string | null;
-  setBookmarkMessage: (value: string | null) => void;
-  isFollowing: boolean;
-  setIsFollowing: (value: boolean) => void;
-  isFollowLoading: boolean;
-  setIsFollowLoading: (value: boolean) => void;
-  isFollowIntent: "follow" | "unfollow" | null;
-  setIsFollowIntent: (value: "follow" | "unfollow" | null) => void;
-  reportOpen: boolean;
-  setReportOpen: (value: boolean) => void;
-  reflectOpen: boolean;
-  setReflectOpen: (value: boolean) => void;
-  localReaction: { reaction: string | null };
-  setLocalReaction: (value: { reaction: string | null }) => void;
-  reactionCountLocal: number;
-  setReactionCountLocal: (value: number) => void;
-  reflectionCountLocal: number;
-  setReflectionCountLocal: (value: number | ((prev: number) => number)) => void;
-  bookmarkCountLocal: number;
-  setBookmarkCountLocal: (value: number) => void;
-  showEchoAnim: boolean;
-  setShowEchoAnim: (value: boolean) => void;
-  hasReflected: boolean;
-  setHasReflected: (value: boolean) => void;
-  hasInkified: boolean;
-  setHasInkified: (value: boolean) => void;
-  echoCount: number;
-  setEchoCount: (value: number) => void;
-  followMessage: string | null;
-  setFollowMessage: (value: string | null) => void;
-  echoUsers: { name: string; avatar: string }[];
-  handleReaction: (reactionId: string | null) => void;
-  handleBookmark: (e: React.MouseEvent) => void;
-  handleFollowClick: (e: React.MouseEvent) => void;
-  inkId?: string;
-  small?: boolean;
+  id: number
+  inkId: string
+  content: string
+  author: string
+  avatar?: string
+  avatarColor?: string
+  readingTime: { minutes: number; seconds: number; text: string }
+  views: number
+  reactionCount: number
+  reflectionCount: number
+  bookmarkCount: number
+  echoCount: number
+  createdAt: string
+  shareUrl: string
+  onClick: () => void
+  onHover: () => void
+  onBookmark: () => void
+  onShare: () => void
+  onFollow: () => void
+  isOwnInk?: boolean
+  onPinInk?: (inkId: number) => void
+  isPinned?: boolean
 }
 
-// Helper to get hashtags and mood based on content
-export function getTagsAndMood(content: string) {
-  if (content.includes('poem') || content.match(/moonlight|fire|bloom|sea|soft/)) {
-    return { tags: ['#poem', '#mindfulness'], mood: 'Dreamy' };
+export default function InkCard({
+  id,
+  inkId,
+  content,
+  author,
+  avatar,
+  avatarColor = "from-purple-500 to-pink-500",
+  readingTime,
+  views,
+  reactionCount,
+  reflectionCount,
+  bookmarkCount,
+  echoCount,
+  createdAt,
+  shareUrl,
+  onClick,
+  onHover,
+  onBookmark,
+  onShare,
+  onFollow,
+  isOwnInk = false,
+  onPinInk,
+  isPinned = false,
+}: InkCardProps) {
+  const [isLiked, setIsLiked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isEchoed, setIsEchoed] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [showReflectModal, setShowReflectModal] = useState(false)
+  const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const [localReactionCount, setLocalReactionCount] = useState(reactionCount)
+  const [localReflectionCount, setLocalReflectionCount] = useState(reflectionCount)
+  const [localBookmarkCount, setLocalBookmarkCount] = useState(bookmarkCount)
+  const [localEchoCount, setLocalEchoCount] = useState(echoCount)
+  const [isHovered, setIsHovered] = useState(false)
+
+  const cardRef = useRef<HTMLDivElement>(null)
+  const { playSound } = useSoundEffects()
+
+  const inkType = detectInkType(content)
+  const displayContent = truncate(content, 280)
+  const timeAgo = formatTimeAgo(createdAt)
+
+  // Get username without @ symbol for URL
+  const username = author.startsWith("@") ? author.slice(1) : author
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsLiked(!isLiked)
+    setLocalReactionCount((prev) => (isLiked ? prev - 1 : prev + 1))
+    playSound("success")
   }
-  if (content.includes('"') || content.includes("'")) {
-    return { tags: ['#dialogue', '#story'], mood: 'Witty' };
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsBookmarked(!isBookmarked)
+    setLocalBookmarkCount((prev) => (isBookmarked ? prev - 1 : prev + 1))
+    onBookmark()
+    playSound("bookmark")
   }
-  if (content.toLowerCase().includes('affirmation') || content.toLowerCase().includes('intention')) {
-    return { tags: ['#affirmation', '#selfcare'], mood: 'Inspiring' };
+
+  const handleEcho = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsEchoed(!isEchoed)
+    setLocalEchoCount((prev) => (isEchoed ? prev - 1 : prev + 1))
+    playSound("notification")
   }
-  if (content.toLowerCase().includes('meme') || content.toLowerCase().includes('cat') || content.toLowerCase().includes('frog')) {
-    return { tags: ['#danktale', '#funny'], mood: 'Witty' };
+
+  const handleReflect = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowReflectModal(true)
   }
-  if (content.toLowerCase().includes('confession')) {
-    return { tags: ['#confession', '#truth'], mood: 'Honest' };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowShareModal(true)
+    onShare()
   }
-  if (content.toLowerCase().includes('did you know') || content.toLowerCase().includes('octopus') || content.toLowerCase().includes('honey')) {
-    return { tags: ['#fact', '#curious'], mood: 'Curious' };
+
+  const handleMoreOptions = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowMoreOptions(!showMoreOptions)
   }
-  if (content.toLowerCase().includes('quote') || content.length < 80) {
-    return { tags: ['#quote', '#inspiration'], mood: 'Inspiring' };
-  }
-  return { tags: ['#story', '#mindfulness'], mood: 'Reflective' };
-}
 
-const InkCardComponent = (props: InkCardProps) => {
-  const {
-    id,
-    content,
-    author,
-    avatarColor,
-    isLong,
-    reaction,
-    readingTime,
-    onClick,
-    onHover,
-    onReact,
-    onBookmark,
-    onShare,
-    onFollow,
-    views,
-    reactionCount,
-    reflectionCount,
-    bookmarkCount,
-    shareCount = 0,
-    animateBookmark,
-    setAnimateBookmark,
-    bookmarked,
-    bookmarkLocked,
-    setBookmarkLocked,
-    bookmarkMessage,
-    setBookmarkMessage,
-    isFollowing,
-    setIsFollowing,
-    isFollowLoading,
-    setIsFollowLoading,
-    isFollowIntent,
-    setIsFollowIntent,
-    reportOpen,
-    setReportOpen,
-    reflectOpen,
-    setReflectOpen,
-    localReaction,
-    setLocalReaction,
-    reactionCountLocal,
-    setReactionCountLocal,
-    reflectionCountLocal,
-    setReflectionCountLocal,
-    bookmarkCountLocal,
-    setBookmarkCountLocal,
-    showEchoAnim,
-    setShowEchoAnim,
-    hasReflected,
-    setHasReflected,
-    hasInkified,
-    setHasInkified,
-    echoCount,
-    setEchoCount,
-    followMessage,
-    setFollowMessage,
-    echoUsers,
-    handleReaction,
-    handleBookmark,
-    handleFollowClick,
-    inkId,
-    small = false,
-    ...rest
-  } = props;
-
-  const hasReacted = localReaction.reaction !== null;
-  const shareUrl = `https://inkly.app/?share=${id}`;
-
-  const { tags, mood } = getTagsAndMood(content);
-
-  const handleReportClick = useCallback(() => setReportOpen(true), [setReportOpen]);
-
-  const [expanded, setExpanded] = useState(false);
-
-  const { playSound } = useSoundEffects();
-
-  // Determine truncation length
-  const TRUNCATE_LENGTH = isLong ? 280 : 120;
-  const isTruncatable = content.length > TRUNCATE_LENGTH;
-
-  const [undoInkifyMsg, setUndoInkifyMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (followMessage) {
-      const timeout = setTimeout(() => setFollowMessage(null), 2500);
-      return () => clearTimeout(timeout);
+  const handlePin = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onPinInk) {
+      onPinInk(id)
     }
-  }, [followMessage]);
+  }
 
-  useEffect(() => {
-    if (showEchoAnim) {
-      const timeout = setTimeout(() => setShowEchoAnim(false), 600);
-      return () => clearTimeout(timeout);
-    }
-  }, [showEchoAnim, setShowEchoAnim]);
+  const handleReflectionSubmit = (reflection: string) => {
+    setLocalReflectionCount((prev) => prev + 1)
+    setShowReflectModal(false)
+    playSound("reflection")
+  }
+
+  const handleCardClick = () => {
+    onClick()
+  }
+
+  const handleMouseEnter = () => {
+    setIsHovered(true)
+    onHover()
+  }
+
+  const handleMouseLeave = () => {
+    setIsHovered(false)
+  }
 
   return (
     <>
-      <div className={`w-full bg-card rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-border${small ? ' text-xs' : ''}`} onClick={onClick}>
-        <div className={`flex items-center justify-between mb-6${small ? ' text-xs' : ''}`}>
-          <div className="flex items-center gap-2">
-            <UserHoverCard
-              author={author}
-              avatarColor={avatarColor}
-              isFollowing={isFollowing}
-              isFollowLoading={isFollowLoading}
-              onFollow={handleFollowClick}
-              followIntent={isFollowIntent}
-              onMessage={() => {}}
-              onViewProfile={() => {}}
-            >
-              <div className={`relative ${getUserBadgeType(author) ? 'p-0.5 rounded-full' : ''} ${
-                getUserBadgeType(author) === 'creator' ? 'bg-gradient-to-r from-purple-400 to-pink-400' :
-                getUserBadgeType(author) === 'admin' ? 'bg-gradient-to-r from-red-400 to-pink-400' :
-                getUserBadgeType(author) === 'moderator' ? 'bg-gradient-to-r from-blue-400 to-cyan-400' :
-                getUserBadgeType(author) === 'contributor' ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
-                getUserBadgeType(author) === 'writer' ? 'bg-gradient-to-r from-orange-400 to-amber-400' :
-                getUserBadgeType(author) === 'author' ? 'bg-gradient-to-r from-indigo-400 to-purple-400' : ''
-              }`}>
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white text-base font-medium`}>
-                    {getDisplayName(author).split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
+      <motion.div
+        ref={cardRef}
+        className={`group relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden ${
+          isHovered ? "scale-[1.02] shadow-2xl" : ""
+        }`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -2 }}
+        onClick={handleCardClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {isPinned && (
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-purple-500 text-white p-1.5 rounded-full shadow-lg">
+              <Pin className="w-3 h-3" />
+            </div>
+          </div>
+        )}
+
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/${encodeURIComponent(username)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:scale-105 transition-transform duration-200"
+              >
+                <Avatar className="w-10 h-10 ring-2 ring-white/50 dark:ring-gray-700/50">
+                  {avatar ? (
+                    <img src={avatar || "/placeholder.svg"} alt={author} className="w-full h-full object-cover" />
+                  ) : (
+                    <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white font-semibold`}>
+                      {author.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
-                {getUserBadgeType(author) && (
-                  <AvatarBadge type={getUserBadgeType(author)!} />
+              </Link>
+              <div>
+                <Link
+                  href={`/${encodeURIComponent(username)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
+                >
+                  {author}
+                </Link>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span>{timeAgo}</span>
+                  <span>•</span>
+                  <span>{readingTime.text}</span>
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    <span>{formatCount(views)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMoreOptions}
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+              <AnimatePresence>
+                {showMoreOptions && (
+                  <MoreOptionsDropdown
+                    onClose={() => setShowMoreOptions(false)}
+                    isOwnInk={isOwnInk}
+                    onPin={handlePin}
+                    isPinned={isPinned}
+                    onFollow={onFollow}
+                    inkId={inkId}
+                    author={author}
+                  />
                 )}
-              </div>
-            </UserHoverCard>
-            <UserHoverCard
-              author={author}
-              avatarColor={avatarColor}
-              isFollowing={isFollowing}
-              isFollowLoading={isFollowLoading}
-              onFollow={handleFollowClick}
-              followIntent={isFollowIntent}
-              onMessage={() => {}}
-              onViewProfile={() => {}}
-            >
-              <div className="flex flex-col -space-y-1 cursor-pointer">
-                <span className="text-sm font-semibold text-foreground flex items-center gap-1">
-                  {getDisplayName(author)}
-                  {/* Only show verified tick for contributors (not special users) */}
-                  {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && (
-                    <VerifiedTick />
-                  )}
-                </span>
-                <span className="text-xs text-muted-foreground">2h ago</span>
-              </div>
-            </UserHoverCard>
+              </AnimatePresence>
+            </div>
           </div>
-          <div className="flex items-center gap-0">
-            <FollowButton onFollow={handleFollowClick} isFollowing={isFollowing} isLoading={isFollowLoading}  followIntent={isFollowIntent} />
-            <MoreOptionsDropdown url={shareUrl} onShared={onShare} onReportClick={handleReportClick} />
+
+          {/* Content */}
+          <div className="mb-4">
+            <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{displayContent}</p>
+            {content.length > 280 && (
+              <button className="text-purple-600 dark:text-purple-400 text-sm font-medium mt-2 hover:underline">
+                Read more
+              </button>
+            )}
           </div>
-        </div>
 
-        <div className={`mb-4 ${small ? 'text-xs' : 'text-base sm:text-[16px] md:text-[17px] lg:text-[18px]'} font-semibold text-foreground leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-3 sm:py-2`}>
-          <Link href={`/ink/${inkId ?? id}`} passHref legacyBehavior>
-            <a
-              style={{ color: 'inherit', textDecoration: 'none' }}
-              onClick={e => e.stopPropagation()}
-            >
-              {expanded || !isTruncatable ? (
-                <>
-                  {content}
-                  {isTruncatable && expanded && (
-                    <button
-                      className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
-                      onClick={e => { e.stopPropagation(); setExpanded(false); }}
-                    >
-                      Read less
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  {truncate(content, TRUNCATE_LENGTH)}
-                  <button
-                    className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
-                    onClick={e => { e.stopPropagation(); setExpanded(true); }}
-                  >
-                    Read more
-                  </button>
-                </>
-              )}
-            </a>
-          </Link>
-        </div>
+          {/* Ink Type Badge */}
+          {inkType !== "general" && (
+            <div className="mb-4">
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  inkType === "question"
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                    : inkType === "confession"
+                      ? "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
+                      : inkType === "fact"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                }`}
+              >
+                {inkType.charAt(0).toUpperCase() + inkType.slice(1)}
+              </span>
+            </div>
+          )}
 
-        <div className={`flex items-center space-between flex-wrap gap-2 mb-2 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'}`}>
-          {tags.map((tag) => (
-            <span 
-              key={tag} 
-              className="hover:text-purple-800 hover:underline cursor-pointer text-purple-700 text-xs transition-all duration-200"
-            >
-              {tag}
-            </span>
-          ))}
-          <span className={`bg-purple-50 border border-purple-50 text-purple-600 font-medium px-1.5 py-0.5 rounded-full ml-auto text-xs dark:bg-purple-900 dark:border-purple-800 dark:text-purple-200`}>{mood}</span>
-        </div>
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLike}
+                className={`flex items-center gap-2 transition-all duration-200 ${
+                  isLiked
+                    ? "text-red-500 hover:text-red-600"
+                    : "text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
+                <span className="text-sm">{formatCount(localReactionCount)}</span>
+              </Button>
 
-        <div className={`flex justify-between items-center ${small ? 'text-[11px]' : 'text-xs'} text-muted-foreground pt-2 border-t border-border`}>
-          <div className="flex items-center gap-3">
-            <ReactionButton
-              onReaction={handleReaction}
-              selectedReaction={localReaction.reaction}
-              onSoundPlay={onHover}
-              size="sm"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                setReflectOpen(true);
-              }}
-              onMouseEnter={onHover}
-              className="relative text-muted-foreground hover:text-blue-600 w-8 h-8"
-              disabled={hasReflected && hasInkified}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317" />
-              </svg>
-            </Button>
-          </div>
-          <div className={`flex items-center gap-3 ${small ? 'text-[11px]' : 'text-xs sm:text-sm'} text-muted-foreground`}>
-            <div className="flex items-center gap-1"><Clock className="w-4 h-4" /><span>{readingTime.text}</span></div>
-            <span>•</span>
-            <div className="flex items-center gap-1"><Eye className="w-4 h-4" /><span>{formatCount(views)}</span></div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReflect}
+                className="flex items-center gap-2 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-sm">{formatCount(localReflectionCount)}</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEcho}
+                className={`flex items-center gap-2 transition-all duration-200 ${
+                  isEchoed
+                    ? "text-green-500 hover:text-green-600"
+                    : "text-gray-500 hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400"
+                }`}
+              >
+                <Share2 className={`w-4 h-4 ${isEchoed ? "fill-current" : ""}`} />
+                <span className="text-sm">{formatCount(localEchoCount)}</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBookmark}
+                className={`transition-all duration-200 ${
+                  isBookmarked
+                    ? "text-yellow-500 hover:text-yellow-600"
+                    : "text-gray-500 hover:text-yellow-500 dark:text-gray-400 dark:hover:text-yellow-400"
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${isBookmarked ? "fill-current" : ""}`} />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="text-gray-500 hover:text-purple-500 dark:text-gray-400 dark:hover:text-purple-400 transition-colors duration-200"
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
+      </motion.div>
 
-       {echoCount > 0 && (
-        <div className="relative flex items-center gap-2 text-xs text-muted-foreground pt-1 pl-1">
-          <motion.div
-            className="flex"
-            key={echoCount}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          >
-            <EchoPile users={echoUsers} total={echoCount} />
-          </motion.div>
-          <EchoBurst show={showEchoAnim} />
-        </div>
-      )}
-
-      </div>
-
-      <ReflectModal
-        open={reflectOpen}
-        onClose={() => setReflectOpen(false)}
-        onRepost={() => {
-          playSound("modalOpen");
-          setHasInkified(true);
-          setReflectOpen(false);
-        }}
-        onUndoRepost={() => {
-          setHasInkified(false);
-          setUndoInkifyMsg("Inkify undone. You can repost if you wish.");
-          setReflectOpen(false);
-        }}
-        onSubmit={(text) => {
-          setReflectionCountLocal((prev: number) => prev + 1);
-          setHasReflected(true);
-          console.log("Reflection text:", text);
-        }}
-        originalInk={{ content, author, timestamp: "2h ago" }}
-        hasReflected={hasReflected}
-        hasInkified={hasInkified}
+      <ShareModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={shareUrl}
       />
 
-      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id.toString()} content={content} />
-      {bookmarkMessage && <BookmarkToast message={bookmarkMessage} />}
-      {followMessage && <FollowToast key={followMessage} message={followMessage} />}
-      {undoInkifyMsg && <FloatingToast key={undoInkifyMsg} message={undoInkifyMsg} />}
-
-
+      <ReflectModal
+        open={showReflectModal}
+        onClose={() => setShowReflectModal(false)}
+        onSubmit={handleReflectionSubmit}
+        onRepost={() => {}}
+        onUndoRepost={() => {}}
+        originalInk={{ content, author, timestamp: createdAt }}
+        hasReflected={false}
+        hasInkified={false}
+      />
     </>
-  );
+  )
 }
-
-export default React.memo(InkCardComponent);

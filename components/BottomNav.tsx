@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { Home, Search, Plus, Bell, Settings } from "lucide-react"
+import { Home, Search, Plus, Settings, PenTool } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
@@ -56,11 +56,11 @@ export default function BottomNav() {
       isSpecial: true,
     },
     {
-      icon: Bell,
-      label: "Notifications",
-      id: "notifications",
-      href: "/notifications",
-      ariaLabel: "View your notifications",
+      icon: PenTool,
+      label: "Studio",
+      id: "studio",
+      href: "/studio",
+      ariaLabel: "Access Inkly Studio creator dashboard",
     },
     {
       icon: Settings,
@@ -76,7 +76,7 @@ export default function BottomNav() {
     if (pathname === "/") return "home"
     if (pathname.startsWith("/explore")) return "explore"
     if (pathname.startsWith("/create")) return "create"
-    if (pathname.startsWith("/notifications")) return "notifications"
+    if (pathname.startsWith("/studio")) return "studio"
     if (pathname.startsWith("/settings")) return "settings"
     if (pathname.startsWith("/test-nav")) return "home" // For testing
     return "home"
@@ -140,7 +140,9 @@ export default function BottomNav() {
 
           {/* Show label for active item */}
           {activeId === id && !isSpecial && (
-            <span className="text-[10px] font-medium leading-none transition-all duration-200 mt-0.5 text-purple-600 dark:text-purple-400">{label}</span>
+            <span className="text-[10px] font-medium leading-none transition-all duration-200 mt-0.5 text-purple-600 dark:text-purple-400">
+              {label}
+            </span>
           )}
 
           {/* Active indicator dot */}

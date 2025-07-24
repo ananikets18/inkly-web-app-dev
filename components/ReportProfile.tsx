@@ -16,7 +16,6 @@ import {
   isOnlyPunctuationOrWhitespace,
   containsLink,
 } from "@/utils/textFilters"
-import { useSoundEffects } from "../hooks/useSoundEffects"
 
 const reportReasons = [
   "Spam or misleading",
@@ -49,18 +48,10 @@ export default function ReportProfile({
   const [toastVisible, setToastVisible] = useState(false)
   const [shouldShake, setShouldShake] = useState(false)
   const [inputWarning, setInputWarning] = useState("")
-  const { playSound } = useSoundEffects()
 
   const MAX_CHARS = 350
   const isOther = selectedReason === "Other"
   const isOverLimit = customText.length > MAX_CHARS
-
-  // Play modal open sound when modal opens
-  useEffect(() => {
-    if (open) {
-      playSound("modalOpen")
-    }
-  }, [open, playSound])
 
   const handleSubmit = async () => {
     if (!selectedReason) return
@@ -128,7 +119,6 @@ export default function ReportProfile({
   }
 
   const handleClose = () => {
-    playSound("modalClose")
     onClose()
   }
 

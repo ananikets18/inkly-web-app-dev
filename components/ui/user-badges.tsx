@@ -129,4 +129,4 @@ export function getUserBadgeType(author: string): 'creator' | 'admin' | 'moderat
 export function shouldShowVerifiedTick(author: string): boolean {
   const verifiedUsers = ['emma_wilson', 'david_chen', 'lisa_park', 'jessica_brown', 'michael_lee'];
   return verifiedUsers.includes(author);
-} 
+}

@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import DOMPurify from 'dompurify';
 import PROFANITY_LIST from "@/utils/profanityList";
 import { containsProfanity, sanitizeInput, isEmojiSpam, isRepeatedCharSpam, isOnlyPunctuationOrWhitespace, containsLink } from "@/utils/textFilters";
-import { useSoundEffects } from "../hooks/useSoundEffects";
 
 const reportReasons = [
   "Spam or misleading",
@@ -46,18 +45,10 @@ export default function ReportModal({
   const [toastVisible, setToastVisible] = useState(false);
   const [shouldShake, setShouldShake] = useState(false);
   const [inputWarning, setInputWarning] = useState("");
-  const { playSound } = useSoundEffects();
 
   const MAX_CHARS = 350;
   const isOther = selectedReason === "Other";
   const isOverLimit = customText.length > MAX_CHARS;
-
-  // Play modal open sound when modal opens
-  useEffect(() => {
-    if (open) {
-      playSound("modalOpen");
-    }
-  }, [open, playSound]);
 
   const handleSubmit = async () => {
     if (!selectedReason) return;
@@ -125,7 +116,6 @@ export default function ReportModal({
   };
 
   const handleClose = () => {
-    playSound("modalClose");
     onClose();
   };
 

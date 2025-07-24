@@ -1,10 +1,11 @@
 import React from "react";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserBadge, VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName, badgeConfig } from "@/components/ui/user-badges";
+import { UserBadge, VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName, badgeConfig, AvatarBadge } from "@/components/ui/user-badges";
 import { Button } from "@/components/ui/button";
 import FollowButton from "./FollowButton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import Link from "next/link";
 
 interface UserHoverCardProps {
   author: string;
@@ -57,21 +58,15 @@ const UserHoverCard: React.FC<React.PropsWithChildren<UserHoverCardProps>> = ({
               </AvatarFallback>
             </Avatar>
             {badgeType && (
-              <span className="absolute -bottom-1 -right-1">
-                {/* Only the icon, no text */}
-                {React.cloneElement(
-                  badgeConfig[badgeType].icon,
-                  { className: "w-5 h-5 rounded-full bg-white border-2 border-white shadow" }
-                )}
-              </span>
+              <AvatarBadge type={badgeType} />
             )}
           </div>
           <div className="flex flex-col justify-center">
-            <span className="font-semibold text-gray-900 flex items-center gap-1 text-base">
+            <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1 text-base">
               {displayName}
               {!badgeType && verified && <VerifiedTick />}
-            </span>
-            <span className="text-xs text-gray-500">{username}</span>
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{username}</div>
           </div>
         </div>
         <div className="flex gap-2 mt-3 items-center justify-start">
@@ -81,9 +76,11 @@ const UserHoverCard: React.FC<React.PropsWithChildren<UserHoverCardProps>> = ({
             isLoading={isFollowLoading}
             followIntent={followIntent}
           />
-          <Button variant="ghost" size="sm" onClick={onViewProfile} className="text-xs">
-            View
-          </Button>
+          <Link href={`/${encodeURIComponent(author)}`} passHref legacyBehavior>
+            <Button variant="ghost" size="sm" className="text-xs">
+              View
+            </Button>
+          </Link>
         </div>
       </HoverCardContent>
     </HoverCard>

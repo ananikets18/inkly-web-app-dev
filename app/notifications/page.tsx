@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { Bell, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,10 +21,8 @@ import {
   Filter,
   Check,
   Quote,
-  Sparkles,
   TrendingUp,
   Users,
-  Bell,
   ChevronDown,
   ChevronUp,
   Brain,
@@ -34,6 +33,7 @@ import { useSoundEffects } from "../../hooks/useSoundEffects"
 import Header from "../../components/Header"
 import SideNav from "../../components/SideNav"
 import BottomNav from "../../components/BottomNav"
+import Footer from "@/components/Footer"
 
 type NotificationType =
   | "reaction"
@@ -308,6 +308,68 @@ const getRelativeTime = (date: Date) => {
   return date.toLocaleDateString()
 }
 
+// Hero Section Component
+function NotificationsHeroSection() {
+  return (
+    <section className="relative py-16 px-4 sm:px-6 lg:px-8 overflow-hidden w-full" aria-labelledby="hero-heading">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950/20 dark:via-background dark:to-orange-950/20" />
+
+      {/* Floating particles/ambient elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full opacity-60"
+          animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-32 right-16 w-1 h-1 bg-orange-400 rounded-full opacity-40"
+          animate={{ y: [0, -15, 0], opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-1/4 w-1.5 h-1.5 bg-teal-400 rounded-full opacity-50"
+          animate={{ y: [0, -10, 0], opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }}
+        />
+      </div>
+
+      <div className="relative max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <h1
+            id="hero-heading"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-purple-500 to-orange-500 mb-6 leading-tight"
+          >
+            Notifications
+          </h1>
+          <motion.p
+            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          >
+            Stay connected with your community and creative journey
+          </motion.p>
+          <motion.div
+            className="flex items-center justify-center gap-2 mt-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          >
+            <Bell className="w-5 h-5 text-purple-500" aria-hidden="true" />
+            <span className="text-sm text-muted-foreground font-medium">Never miss a moment of inspiration</span>
+            <Sparkles className="w-5 h-5 text-orange-500" aria-hidden="true" />
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
   const [filter, setFilter] = useState<"all" | "important" | "social" | "system">("all")
@@ -359,7 +421,9 @@ export default function NotificationsPage() {
     const Icon = getNotificationIcon(notification.type)
     const isExpanded = expandedClusters.has(notification.id)
     const isUnread = !notification.isRead
-    const sentimentGradient = notification.clustered ? getSentimentGradient(notification.sentiment) : "from-purple-400/20 to-indigo-400/20"
+    const sentimentGradient = notification.clustered
+      ? getSentimentGradient(notification.sentiment)
+      : "from-purple-400/20 to-indigo-400/20"
     const ts = new Date(notification.timestamp as any)
     const timeString = getRelativeTime(ts)
 
@@ -377,11 +441,16 @@ export default function NotificationsPage() {
         >
           {/* Timeline dot */}
           <div className="absolute -left-6 top-6 flex flex-col items-center">
-            <Circle className={`w-3 h-3 ${isUnread ? "text-purple-500" : "text-muted-foreground/30"}`} fill={isUnread ? "#a78bfa" : "var(--muted-foreground)"} />
+            <Circle
+              className={`w-3 h-3 ${isUnread ? "text-purple-500" : "text-muted-foreground/30"}`}
+              fill={isUnread ? "#a78bfa" : "var(--muted-foreground)"}
+            />
             <div className="w-px h-full bg-border" />
           </div>
           {/* Icon */}
-          <div className={`flex items-center justify-center min-w-[48px] h-full p-3 ${notification.clustered ? `bg-gradient-to-br ${sentimentGradient}` : "bg-muted"} rounded-l-xl`}>
+          <div
+            className={`flex items-center justify-center min-w-[48px] h-full p-3 ${notification.clustered ? `bg-gradient-to-br ${sentimentGradient}` : "bg-muted"} rounded-l-xl`}
+          >
             <Icon className="w-6 h-6 text-purple-600" />
           </div>
           {/* Content */}
@@ -415,24 +484,30 @@ export default function NotificationsPage() {
                       </Avatar>
                     ))}
                     {notification.users.length > 3 && (
-                      <span className="ml-1 text-xs text-muted-foreground font-medium">+{notification.users.length - 3}</span>
+                      <span className="ml-1 text-xs text-muted-foreground font-medium">
+                        +{notification.users.length - 3}
+                      </span>
                     )}
                   </div>
                 </div>
                 {/* Actions & Expand */}
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex gap-1">
-                    {notification.actions && notification.actions.map((action, idx) => (
-                      <Button
-                        key={idx}
-                        size="sm"
-                        variant={action.type === "primary" ? "default" : "outline"}
-                        className="h-6 px-3 text-xs rounded-full shadow-none bg-purple-600 hover:bg-purple-700 text-white"
-                        onClick={e => { e.stopPropagation(); action.action(); }}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
+                    {notification.actions &&
+                      notification.actions.map((action, idx) => (
+                        <Button
+                          key={idx}
+                          size="sm"
+                          variant={action.type === "primary" ? "default" : "outline"}
+                          className="h-6 px-3 text-xs rounded-full shadow-none bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            action.action()
+                          }}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
                   </div>
                   <div className="flex items-center gap-1">
                     {isUnread && (
@@ -467,9 +542,13 @@ export default function NotificationsPage() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden mt-2"
                     >
-                      <div className={`bg-gradient-to-r ${sentimentGradient} rounded-md p-2 border border-border flex items-start gap-2`}>
+                      <div
+                        className={`bg-gradient-to-r ${sentimentGradient} rounded-md p-2 border border-border flex items-start gap-2`}
+                      >
                         <Quote className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-muted-foreground italic line-clamp-2">"{notification.ink.content}"</p>
+                        <p className="text-xs text-muted-foreground italic line-clamp-2">
+                          "{notification.ink.content}"
+                        </p>
                       </div>
                     </motion.div>
                   )}
@@ -501,17 +580,21 @@ export default function NotificationsPage() {
                 {/* Actions */}
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex gap-1">
-                    {notification.actions && notification.actions.map((action, idx) => (
-                      <Button
-                        key={idx}
-                        size="sm"
-                        variant={action.type === "primary" ? "default" : "outline"}
-                        className="h-6 px-3 text-xs rounded-full shadow-none bg-purple-600 hover:bg-purple-700 text-white"
-                        onClick={e => { e.stopPropagation(); action.action(); }}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
+                    {notification.actions &&
+                      notification.actions.map((action, idx) => (
+                        <Button
+                          key={idx}
+                          size="sm"
+                          variant={action.type === "primary" ? "default" : "outline"}
+                          className="h-6 px-3 text-xs rounded-full shadow-none bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            action.action()
+                          }}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
                   </div>
                   {isUnread && (
                     <Button
@@ -577,125 +660,148 @@ export default function NotificationsPage() {
       <Header />
       <div className="flex flex-1">
         <SideNav />
-        <main className="flex-1 max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8 relative">
-          {/* Sticky Header */}
-          <div className="pb-6 md:pb-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border gap-2 sm:gap-0">
-            <div className="pl-2 py-3 mb-4">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tracking-tight">Notifications</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Stay connected with your community</p>
-            </div>
-            <div className="flex items-center gap-2 pl-2.5 md:pl-0">
-              {unreadCount > 0 && (
+        <main className="flex-1 w-full">
+          {/* Hero Section */}
+          <NotificationsHeroSection />
+
+          {/* Notifications Content */}
+          <div className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8 relative">
+            {/* Filters */}
+            <div className="mb-4 flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={markAllAsRead}
+                    className="text-xs h-7 px-3 rounded-full border-border shadow-none bg-transparent"
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Read all
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={markAllAsRead}
+                  onClick={() => setShowFilters(!showFilters)}
                   className="text-xs h-7 px-3 rounded-full border-border shadow-none"
                 >
-                  <Check className="w-4 h-4 mr-1" />
-                  Read all
+                  <Filter className="w-4 h-4 mr-1" />
+                  Filter
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="text-xs h-7 px-3 rounded-full border-border shadow-none"
-              >
-                <Filter className="w-4 h-4 mr-1" />
-                Filter
-              </Button>
+              </div>
             </div>
-          </div>
-          {/* Filters */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mb-4 overflow-hidden"
-              >
-                <Card className="p-2 bg-muted border border-border">
-                  <Tabs value={filter} onValueChange={(value) => setFilter(value as any)}>
-                    <TabsList className="grid w-full grid-cols-4 h-8">
-                      <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-                      <TabsTrigger value="important" className="text-xs">Important</TabsTrigger>
-                      <TabsTrigger value="social" className="text-xs">Social</TabsTrigger>
-                      <TabsTrigger value="system" className="text-xs">System</TabsTrigger>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mb-4 overflow-hidden"
+                >
+                  <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 bg-muted rounded-lg p-1">
+                      <TabsTrigger value="all" className="text-xs">
+                        All
+                      </TabsTrigger>
+                      <TabsTrigger value="important" className="text-xs">
+                        Important
+                      </TabsTrigger>
+                      <TabsTrigger value="social" className="text-xs">
+                        Social
+                      </TabsTrigger>
+                      <TabsTrigger value="system" className="text-xs">
+                        System
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {/* Main Content & Sidebar */}
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Timeline Notifications */}
-            <div className="flex-1">
-              <div className="space-y-12">
-                <NotificationGroup title="Milestones" notifications={groupedNotifications.milestones} icon={Trophy} />
-                <NotificationGroup title="Today" notifications={groupedNotifications.today} icon={Bell} />
-                <NotificationGroup title="This Week" notifications={groupedNotifications.thisWeek} icon={TrendingUp} />
-                <NotificationGroup title="Last Month" notifications={groupedNotifications.lastMonth} icon={Users} />
-                <NotificationGroup title="Earlier" notifications={groupedNotifications.older} icon={Users} />
-              </div>
-              {/* Empty State */}
-              {filteredNotifications.length === 0 && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-16">
-                  <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4 shadow">
-                    <Bell className="w-10 h-10 text-purple-300" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No notifications yet</h3>
-                  <p className="text-sm text-muted-foreground">When people interact with your inks, you'll see them here. ✨</p>
                 </motion.div>
               )}
-            </div>
-            {/* Sidebar Weekly Stats */}
-            <aside className="w-full lg:w-72 flex-shrink-0 mt-8 lg:mt-0">
+            </AnimatePresence>
+
+            {/* Weekly Stats */}
+            <Card className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-purple-200 dark:border-purple-800">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-purple-500" />
+                    This Week
+                  </h3>
+                  <Badge variant="secondary" className="text-xs">
+                    +{weeklyStats.xpGained} XP
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-purple-600">{weeklyStats.newFollowers}</div>
+                    <div className="text-xs text-muted-foreground">New followers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-purple-600">{weeklyStats.totalReactions}</div>
+                    <div className="text-xs text-muted-foreground">Reactions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-purple-600">{weeklyStats.reflections}</div>
+                    <div className="text-xs text-muted-foreground">Reflections</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-purple-600">{weeklyStats.xpGained}</div>
+                    <div className="text-xs text-muted-foreground">XP gained</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notifications Timeline */}
+            <div className="space-y-8">
+              <NotificationGroup title="Today" notifications={groupedNotifications.today} icon={Bell} />
+              <NotificationGroup title="This Week" notifications={groupedNotifications.thisWeek} icon={Users} />
+              <NotificationGroup title="Last Month" notifications={groupedNotifications.lastMonth} icon={Star} />
+
+              {/* Milestones Section */}
               <Collapsible open={showMilestones} onOpenChange={setShowMilestones}>
                 <CollapsibleTrigger asChild>
-                  <Card className="mb-6 cursor-pointer hover:shadow-md transition-shadow bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900 dark:to-indigo-900 border border-border">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full">
-                          <Sparkles className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-base sm:text-lg md:text-xl font-bold text-foreground">This Week You Achieved</h2>
-                      </div>
-                      {showMilestones ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                    </CardContent>
-                  </Card>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 p-0 h-auto text-lg sm:text-xl md:text-2xl font-bold text-foreground tracking-tight hover:bg-transparent"
+                  >
+                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+                    Milestones & Achievements
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5 font-medium">
+                      {groupedNotifications.milestones.length}
+                    </Badge>
+                    {showMilestones ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Card className="mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900 dark:to-indigo-900 border-border">
-                    <CardContent className="p-4 grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <div className="text-lg font-bold text-purple-600">{weeklyStats.newFollowers}</div>
-                        <div className="text-xs text-muted-foreground">Followers</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-purple-600">{weeklyStats.totalReactions}</div>
-                        <div className="text-xs text-muted-foreground">Reactions</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-purple-600">{weeklyStats.reflections}</div>
-                        <div className="text-xs text-muted-foreground">Reflections</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-bold text-purple-600">{weeklyStats.xpGained}</div>
-                        <div className="text-xs text-muted-foreground">XP Gained</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <CollapsibleContent className="space-y-6 ml-6 border-l-2 border-border pl-2 mt-4">
+                  <AnimatePresence mode="popLayout">
+                    {groupedNotifications.milestones.map((notification) => (
+                      <NotificationCard key={notification.id} notification={notification} />
+                    ))}
+                  </AnimatePresence>
                 </CollapsibleContent>
               </Collapsible>
-            </aside>
+
+              <NotificationGroup title="Older" notifications={groupedNotifications.older} icon={Circle} />
+            </div>
+
+            {filteredNotifications.length === 0 && (
+              <div className="text-center py-12">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No notifications</h3>
+                <p className="text-muted-foreground">You're all caught up!</p>
+              </div>
+            )}
           </div>
         </main>
       </div>
+      {/* Bottom Navigation (always visible) */}
+      <nav className="block sticky bottom-0 z-50" aria-label="Bottom navigation" role="navigation">
       <BottomNav />
+      </nav>
+      <Footer />
     </div>
   )
 }

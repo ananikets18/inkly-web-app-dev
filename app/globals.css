@@ -1,93 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-
-/* === Global Body Font === */
-body {
- font-family: "Inter", sans-serif;
-}
-
-
-/* === GeistSans Font Faces === */
-/* @font-face {
-  font-family: 'GeistSans';
-  src: url('/public/fonts/geist/geist-sans/Geist-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GeistSans';
-  src: url('/public/fonts/geist/geist-sans/Geist-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GeistSans';
-  src: url('/public/fonts/geist/geist-sans/Geist-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* === Optional: GeistMono === */
-/* @font-face {
-  font-family: 'GeistMono';
-  src: url('/fonts/geist/geist-sans/GeistMono-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}  */
-
-
-@keyframes shake {
-  0% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
-  100% { transform: translateX(0); }
-}
-
-@keyframes borderPulse {
-  0%, 100% {
-    border-color: #ef4444;
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4);
-  }
-}
-
-@keyframes fadeOut {
-  0% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.animate-shake {
-  animation: shake 0.4s ease-in-out;
-}
-
-.animate-border-pulse {
-  animation: borderPulse 1.2s ease-in-out infinite;
-}
-
-.animate-fade-out {
-  animation: fadeOut 0.5s ease-out forwards;
-}
-
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
 
 @layer base {
   :root {
@@ -97,7 +10,7 @@ body {
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -109,7 +22,7 @@ body {
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 222.2 84% 4.9%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -123,9 +36,9 @@ body {
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    --color-brand: #9333ea;
+    --sidebar-ring: 217.2 10.6% 64.9%;
   }
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -133,8 +46,8 @@ body {
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -145,20 +58,20 @@ body {
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 212.7 26.8% 83.9%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 224 71.4% 4.1%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 224 76.3% 95.9%;
+    --sidebar-primary-foreground: 224 71.4% 4.1%;
+    --sidebar-accent: 216 12.2% 83.9%;
+    --sidebar-accent-foreground: 224 71.4% 4.1%;
+    --sidebar-border: 216 12.2% 11.9%;
+    --sidebar-ring: 216 12.2% 83.9%;
   }
 }
 
@@ -170,199 +83,60 @@ body {
     @apply bg-background text-foreground;
   }
 }
-@keyframes pop-up {
-  0% {
-    transform: scale(0.8) translateY(2px);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2) translateY(-2px);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
 
-.animate-pop-up {
-  animation: pop-up 0.4s ease-out;
-}
-
-@keyframes fade-in-out {
-  0% {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.95);
-  }
-  10% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  90% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.95);
-  }
-}
-
-.animate-fade-in-out {
-  animation: fade-in-out 1.5s ease-in-out forwards;
-}
-
-
-@keyframes pop-up-scale {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.3);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.animate-pop-up-scale {
-  animation: pop-up-scale 300ms ease-out;
-}
-
-/* Ambient Analytics Dashboard Animations */
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* Glassmorphism hover effects */
-.glass-hover {
-  transition: all 0.3s ease;
-}
-
-.glass-hover:hover {
-  backdrop-filter: blur(20px);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-}
-
-/* Required styles for react-masonry-css */
-.my-masonry-grid {
-  display: flex;
-  width: auto;
-  margin-left: -8px;
-}
-
-.my-masonry-grid_column {
-  padding-left: 8px;
-  background-clip: padding-box;
-}
-
-.my-masonry-grid_column > div {
-  margin-bottom: 1rem;
-}
-
-/* Optimized skeleton animations */
+/* Custom skeleton animation */
 @keyframes skeleton-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 
 .skeleton-pulse {
-  animation: skeleton-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  will-change: opacity;
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Performance optimizations */
-.skeleton-card {
-  contain: layout style paint;
-  will-change: transform;
-}
-
-/* Reduce repaints during scroll */
+/* Masonry grid styles */
 .my-masonry-grid {
-  contain: layout style;
-  will-change: scroll-position;
+  display: -webkit-box; /* Not needed if autoprefixing */
+  display: -ms-flexbox; /* Not needed if autoprefixing */
+  display: flex;
+  margin-left: -8px; /* gutter size offset */
+  width: auto;
+}
+.my-masonry-grid_column {
+  padding-left: 8px; /* gutter size */
+  background-clip: padding-box;
 }
 
-/* Optimize animations */
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-pulse {
-    animation: none;
+/* Masonry grid item */
+.my-masonry-grid_column > div {
+  margin-bottom: 8px;
+}
+
+/* Dark mode skeleton improvements */
+.dark .skeleton-pulse {
+  animation: skeleton-pulse-dark 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes skeleton-pulse-dark {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
   }
 }
 
-textarea{
-  /* display: none !important; */
-  outline: none !important;
-  border: none !important;
+/* Ensure smooth transitions for dark mode */
+.skeleton-card {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.animate-cosmic-bg {
-  animation: cosmic-bg-move 18s linear infinite alternate;
-}
-@keyframes cosmic-bg-move {
-  0% { background-position: 0% 0%, 100% 100%; }
-  100% { background-position: 100% 100%, 0% 0%; }
-}
-.animate-twinkle {
-  animation: twinkle 2.5s infinite alternate;
-}
-@keyframes twinkle {
-  0% { opacity: 0.7; }
-  50% { opacity: 0.3; }
-  100% { opacity: 0.7; }
+.skeleton-card > * {
+  transition: background-color 0.2s ease;
 }

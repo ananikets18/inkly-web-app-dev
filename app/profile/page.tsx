@@ -225,7 +225,27 @@ export default function ProfilePage() {
 
             {/* --------------------------- PINNED INKS --------------------------- */}
             {isOwnProfile && (
-              <PinnedInksSection pinnedInks={pinnedInks} isOwnProfile={isOwnProfile} onUnpinInk={handleUnpinInk} />
+              <PinnedInksSection
+                pinnedInks={pinnedInks}
+                isOwnProfile={isOwnProfile}
+                onUnpinInk={handleUnpinInk}
+                onSavePins={(newPinIds) => {
+                  setCreatedInks((prev) =>
+                    prev.map((ink) => ({
+                      ...ink,
+                      isPinned: newPinIds.includes(ink.id),
+                    }))
+                  )
+                  setPinnedInks(() => {
+                    // Reorder pinnedInks to match newPinIds order
+                    const newOrder = newPinIds
+                      .map(id => createdInks.find(ink => ink.id === id))
+                      .filter((ink): ink is typeof createdInks[number] => Boolean(ink))
+                    return newOrder
+                  })
+                  toast({ title: "Pins updated successfully", description: "Your spotlight inks have been updated." })
+                }}
+              />
             )}
 
             {/* ---------------------- GRID (sidebar + content) ------------------- */}

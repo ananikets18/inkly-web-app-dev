@@ -2,6 +2,8 @@
 
 import type React from "react"
 
+import { motion } from "framer-motion"
+import { Settings, Sparkles } from "lucide-react"
 import Header from "@/components/Header"
 import BottomNav from "@/components/BottomNav"
 import SideNav from "@/components/SideNav"
@@ -42,11 +44,12 @@ import {
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import { useTheme } from "next-themes"
 import NotificationSettings from "@/components/NotificationSettings"
 import NotificationService from "@/components/NotificationService"
+import Footer from "@/components/Footer"
 
 const navSections = [
   {
@@ -101,6 +104,68 @@ const sessionIcon = (device: string) => {
   if (device.toLowerCase().includes("iphone")) return <Smartphone className="w-5 h-5" />
   if (device.toLowerCase().includes("ipad")) return <Tablet className="w-5 h-5" />
   return <Monitor className="w-5 h-5" />
+}
+
+// Hero Section Component
+function SettingsHeroSection() {
+  return (
+    <section className="relative py-16 px-4 sm:px-6 lg:px-8 overflow-hidden w-full" aria-labelledby="hero-heading">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950/20 dark:via-background dark:to-orange-950/20" />
+
+      {/* Floating particles/ambient elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full opacity-60"
+          animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-32 right-16 w-1 h-1 bg-orange-400 rounded-full opacity-40"
+          animate={{ y: [0, -15, 0], opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-1/4 w-1.5 h-1.5 bg-teal-400 rounded-full opacity-50"
+          animate={{ y: [0, -10, 0], opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }}
+        />
+      </div>
+
+      <div className="relative max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <h1
+            id="hero-heading"
+            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-purple-500 to-orange-500 mb-6 leading-tight"
+          >
+            Settings & Preferences
+          </h1>
+          <motion.p
+            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          >
+            Customize your Inkly experience to match your creative style
+          </motion.p>
+          <motion.div
+            className="flex items-center justify-center gap-2 mt-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+          >
+            <Settings className="w-5 h-5 text-purple-500" aria-hidden="true" />
+            <span className="text-sm text-muted-foreground font-medium">Personalize your creative journey</span>
+            <Sparkles className="w-5 h-5 text-orange-500" aria-hidden="true" />
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  )
 }
 
 export default function SettingsPage() {
@@ -210,13 +275,13 @@ export default function SettingsPage() {
         if (Notification.permission === "granted") {
           toast({
             title: "Notifications enabled!",
-            description: "You’ll now receive important updates from Inkly in your browser.",
+            description: "You'll now receive important updates from Inkly in your browser.",
           })
         } else if (Notification.permission === "denied") {
           toast({
             title: "Notifications blocked",
             description:
-              "You won’t receive browser notifications. You can enable them anytime in your browser settings.",
+              "You won't receive browser notifications. You can enable them anytime in your browser settings.",
           })
           setPushNotifications(false)
         } else {
@@ -225,20 +290,20 @@ export default function SettingsPage() {
             if (permission === "granted") {
               toast({
                 title: "Notifications enabled!",
-                description: "You’ll now receive important updates from Inkly in your browser.",
+                description: "You'll now receive important updates from Inkly in your browser.",
               })
             } else {
               toast({
                 title: "Notifications blocked",
                 description:
-                  "You won’t receive browser notifications. You can enable them anytime in your browser settings.",
+                  "You won't receive browser notifications. You can enable them anytime in your browser settings.",
               })
               setPushNotifications(false)
             }
           } catch (e) {
             toast({
               title: "Something went wrong",
-              description: "We couldn’t update your notification settings. Please try again.",
+              description: "We couldn't update your notification settings. Please try again.",
             })
             setPushNotifications(false)
           }
@@ -273,7 +338,7 @@ export default function SettingsPage() {
       return
     }
     setFn(checked)
-    setEmailDialogMessage(checked ? `You’ve enabled ${type} emails.` : `You’ve disabled ${type} emails.`)
+    setEmailDialogMessage(checked ? `You've enabled ${type} emails.` : `You've disabled ${type} emails.`)
     setEmailDialogOpen(true)
   }
 
@@ -293,7 +358,7 @@ export default function SettingsPage() {
         description: `${label} ${checked ? "enabled" : "disabled"}.`,
       })
     } else {
-      setSettingDialogMessage(checked ? `You’ve enabled ${label}.` : `You’ve disabled ${label}.`)
+      setSettingDialogMessage(checked ? `You've enabled ${label}.` : `You've disabled ${label}.`)
       setSettingDialogOpen(true)
     }
   }
@@ -696,7 +761,7 @@ export default function SettingsPage() {
                       Cancel
                     </Button>
                     <Button
-                    className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
+                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
                       variant="default"
                       onClick={() => {
                         setShowSaveDialog(false) /* handle actual save */
@@ -812,7 +877,7 @@ export default function SettingsPage() {
                       Cancel
                     </Button>
                     <Button
-                    className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
+                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
                       variant="default"
                       onClick={() => {
                         setShowSaveDialog(false) /* handle actual save */
@@ -995,7 +1060,7 @@ export default function SettingsPage() {
                       Cancel
                     </Button>
                     <Button
-                    className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
+                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
                       variant="default"
                       onClick={() => {
                         setShowSaveDialog(false) /* handle actual save */
@@ -1282,7 +1347,7 @@ export default function SettingsPage() {
                       Cancel
                     </Button>
                     <Button
-                    className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
+                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
                       variant="default"
                       onClick={() => {
                         setShowSaveDialog(false) /* handle actual save */
@@ -1339,7 +1404,11 @@ export default function SettingsPage() {
                     <Button variant="outline" className="border-border bg-transparent" type="button">
                       Cancel
                     </Button>
-                    <Button variant="default" className="bg-gray-900 text-white hover:bg-gray-700 dark:bg-purple-800 dark:text-white dark:border-purple-500" type="button">
+                    <Button
+                      variant="default"
+                      className="bg-gray-900 text-white hover:bg-gray-700 dark:bg-purple-800 dark:text-white dark:border-purple-500"
+                      type="button"
+                    >
                       Confirm Deactivate
                     </Button>
                   </DialogFooter>
@@ -1405,13 +1474,14 @@ export default function SettingsPage() {
       <Header />
       <div className="flex flex-1">
         <SideNav />
-        <main className="flex-1 max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8">
-          {/* Title and subtitle for settings section, just below header/navbar */}
-          <div className="pt-2 pb-6 pl-3">
-            <h1 className="text-3xl md:text-4xl font-bold mb-1">Settings</h1>
-            <p className="text-sm text-muted-foreground">Manage your account, preferences, and privacy</p>
+        <main className="flex-1 w-full">
+          {/* Hero Section */}
+          <SettingsHeroSection />
+
+          {/* Settings Content */}
+          <div className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8">
             {/* Horizontally scrollable nav for mobile - icons only, no text */}
-            <div className="md:hidden mt-3">
+            <div className="md:hidden mb-6">
               <nav className="flex gap-2 overflow-x-auto no-scrollbar py-2 px-1 bg-card rounded-2xl border border-border shadow-sm">
                 {navSections.map((item, i) => (
                   <button
@@ -1446,69 +1516,69 @@ export default function SettingsPage() {
                 ))}
               </nav>
             </div>
-          </div>
-          {/* Main settings content row */}
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Settings navigation card for desktop */}
-            <aside className="hidden md:block w-full md:w-80 flex-shrink-0 mb-4 md:mb-0">
-              <div className="bg-card rounded-3xl border border-border shadow-sm p-4 md:p-8 flex flex-col gap-3">
-                <h2 className="text-base md:text-lg font-bold mb-4 text-foreground tracking-tight">Settings</h2>
-                <nav className="flex flex-col gap-1.5">
-                  {navSections.map((item, i) => (
-                    <button
-                      key={item.label}
-                      className={`group flex items-center gap-4 px-3 md:px-4 py-2 md:py-2.5 rounded-2xl text-left transition border font-medium text-xs md:text-sm shadow-sm
-                        ${
-                          i === activeTab
-                            ? item.danger
-                              ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 shadow-md"
-                              : "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-200 shadow-md"
-                            : item.danger
-                              ? "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
-                              : "hover:bg-muted dark:hover:bg-muted/40 text-muted-foreground dark:text-muted-foreground"
-                        }
-                        ${item.danger && i !== activeTab ? "" : ""}`}
-                      onClick={() => setActiveTab(i)}
-                      aria-current={i === activeTab ? "page" : undefined}
-                    >
-                      <span
-                        className={`rounded-lg p-2 ${
-                          i === activeTab
-                            ? item.danger
-                              ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200"
-                              : "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200"
-                            : "bg-muted dark:bg-muted/40 text-muted-foreground group-hover:bg-purple-50 dark:group-hover:bg-purple-950 group-hover:text-purple-500 dark:group-hover:text-purple-200"
-                        }`}
+            {/* Main settings content row */}
+            <div className="flex flex-col md:flex-row gap-8">
+              {/* Settings navigation card for desktop */}
+              <aside className="hidden md:block w-full md:w-80 flex-shrink-0 mb-4 md:mb-0">
+                <div className="bg-card rounded-3xl border border-border shadow-sm p-4 md:p-8 flex flex-col gap-3">
+                  <h2 className="text-base md:text-lg font-bold mb-4 text-foreground tracking-tight">Settings</h2>
+                  <nav className="flex flex-col gap-1.5">
+                    {navSections.map((item, i) => (
+                      <button
+                        key={item.label}
+                        className={`group flex items-center gap-4 px-3 md:px-4 py-2 md:py-2.5 rounded-2xl text-left transition border font-medium text-xs md:text-sm shadow-sm
+                          ${
+                            i === activeTab
+                              ? item.danger
+                                ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 shadow-md"
+                                : "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-200 shadow-md"
+                              : item.danger
+                                ? "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950"
+                                : "hover:bg-muted dark:hover:bg-muted/40 text-muted-foreground dark:text-muted-foreground"
+                          }
+                          ${item.danger && i !== activeTab ? "" : ""}`}
+                        onClick={() => setActiveTab(i)}
+                        aria-current={i === activeTab ? "page" : undefined}
                       >
-                        <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </span>
-                      <div className="flex flex-col items-start">
-                        <span className="font-semibold leading-tight text-xs md:text-sm text-foreground">
-                          {item.label}
+                        <span
+                          className={`rounded-lg p-2 ${
+                            i === activeTab
+                              ? item.danger
+                                ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200"
+                                : "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200"
+                              : "bg-muted dark:bg-muted/40 text-muted-foreground group-hover:bg-purple-50 dark:group-hover:bg-purple-950 group-hover:text-purple-500 dark:group-hover:text-purple-200"
+                          }`}
+                        >
+                          <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                         </span>
-                        <span className="text-[10px] md:text-xs text-muted-foreground">{item.desc}</span>
-                      </div>
-                    </button>
-                  ))}
-                </nav>
-              </div>
-            </aside>
-            {/* Main settings panel */}
-            <main className="flex-1 w-full min-w-0">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 32 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -32 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="h-full w-full overflow-x-hidden"
-                >
-                  {renderPanel()}
-                </motion.div>
-              </AnimatePresence>
-              <NotificationService />
-            </main>
+                        <div className="flex flex-col items-start">
+                          <span className="font-semibold leading-tight text-xs md:text-sm text-foreground">
+                            {item.label}
+                          </span>
+                          <span className="text-[10px] md:text-xs text-muted-foreground">{item.desc}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </aside>
+              {/* Main settings panel */}
+              <main className="flex-1 w-full min-w-0">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, x: 32 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -32 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="h-full w-full overflow-x-hidden"
+                  >
+                    {renderPanel()}
+                  </motion.div>
+                </AnimatePresence>
+                <NotificationService />
+              </main>
+            </div>
           </div>
         </main>
       </div>
@@ -1563,6 +1633,7 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Footer />
     </div>
   )
 }

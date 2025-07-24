@@ -1,56 +1,205 @@
 "use client"
-
-import type React from "react"
-
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import Header from "@/components/Header"
-import SideNav from "@/components/SideNav"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Sparkles,
+  Palette,
   Globe,
   Users,
   Lock,
-  X,
-  Plus,
-  Lightbulb,
   Save,
-  Eye,
   AlertTriangle,
-  CheckCircle,
+  FileText,
+  Type,
+  X,
+  ArrowLeft,
+  Sparkles,
   Zap,
+  Trophy,
+  Shield,
+  AlertCircle,
 } from "lucide-react"
-import {
-  validateTextContent,
-  validateTags,
-  cleanTags,
-  detectContentWarnings,
-  calculateXPPreview,
-  suggestTags,
-  type ValidationResult,
-  type ContentWarning,
-} from "@/utils/inkValidation"
-import InkValidationFeedback from "@/components/InkValidationFeedback"
-import ReadyToInkModal from "@/components/ReadyToInkModal"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import { detectInkType } from "@/utils/detectInkType"
 import { generateRandomInkId } from "@/utils/random-ink-id"
-import { calculateReadingTime } from "@/utils/reading-time"
+import {
+  containsProfanity,
+  containsHateSpeech,
+  containsNSFWContent,
+  containsMentalHealthRisk,
+  containsViolence,
+  containsClickbait,
+  containsForbiddenTopic,
+  containsImpersonation,
+  sanitizeInput,
+  isEmojiSpam,
+  isRepeatedCharSpam,
+  containsLink,
+  isOnlyPunctuationOrWhitespace,
+} from "@/utils/textFilters"
+import { validateInkContent, type InkValidationResult } from "@/utils/inkValidation"
 
-const MOODS = [
-  { value: "inspiring", label: "Inspiring", color: "bg-green-100 text-green-800" },
-  { value: "dreamy", label: "Dreamy", color: "bg-purple-100 text-purple-800" },
-  { value: "witty", label: "Witty", color: "bg-yellow-100 text-yellow-800" },
-  { value: "curious", label: "Curious", color: "bg-blue-100 text-blue-800" },
-  { value: "honest", label: "Honest", color: "bg-orange-100 text-orange-800" },
-  { value: "reflective", label: "Reflective", color: "bg-gray-100 text-gray-800" },
+// Enhanced background themes with gradients
+const BACKGROUND_THEMES = [
+  {
+    name: "Pure White",
+    bg: "bg-white",
+    text: "text-gray-900",
+    preview: "bg-white border-2 border-gray-200",
+  },
+  {
+    name: "Soft Paper",
+    bg: "bg-gradient-to-br from-yellow-50 to-orange-50",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-yellow-50 to-orange-50",
+  },
+  {
+    name: "Ocean Breeze",
+    bg: "bg-gradient-to-br from-blue-50 to-cyan-50",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-blue-50 to-cyan-50",
+  },
+  {
+    name: "Forest Mist",
+    bg: "bg-gradient-to-br from-green-50 to-emerald-50",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-green-50 to-emerald-50",
+  },
+  {
+    name: "Lavender Dream",
+    bg: "bg-gradient-to-br from-purple-50 to-pink-50",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-purple-50 to-pink-50",
+  },
+  {
+    name: "Sunset Glow",
+    bg: "bg-gradient-to-br from-orange-100 to-pink-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-orange-100 to-pink-100",
+  },
+  {
+    name: "Rose Garden",
+    bg: "bg-gradient-to-br from-rose-50 to-pink-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-rose-50 to-pink-100",
+  },
+  {
+    name: "Golden Hour",
+    bg: "bg-gradient-to-br from-amber-50 to-yellow-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-amber-50 to-yellow-100",
+  },
+  {
+    name: "Mint Fresh",
+    bg: "bg-gradient-to-br from-green-50 to-green-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-green-50 to-green-100",
+  },
+  {
+    name: "Sky Blue",
+    bg: "bg-gradient-to-br from-sky-50 to-blue-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-sky-50 to-blue-100",
+  },
+  {
+    name: "Coral Reef",
+    bg: "bg-gradient-to-br from-orange-100 to-pink-100",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-orange-100 to-pink-100",
+  },
+  {
+    name: "Sage Wisdom",
+    bg: "bg-gradient-to-br from-green-100 to-emerald-200",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-green-100 to-emerald-200",
+  },
+  // New gradient themes
+  {
+    name: "Aurora Borealis",
+    bg: "bg-gradient-to-br from-green-200 via-blue-200 to-purple-300",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-green-200 via-blue-200 to-purple-300",
+  },
+  {
+    name: "Cosmic Nebula",
+    bg: "bg-gradient-to-br from-purple-300 via-pink-300 to-indigo-400",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-purple-300 via-pink-300 to-indigo-400",
+  },
+  {
+    name: "Fire Sunset",
+    bg: "bg-gradient-to-br from-red-200 via-orange-300 to-yellow-400",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-red-200 via-orange-300 to-yellow-400",
+  },
+  {
+    name: "Ocean Depths",
+    bg: "bg-gradient-to-br from-blue-300 via-teal-400 to-cyan-500",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-blue-300 via-teal-400 to-cyan-500",
+  },
+  {
+    name: "Tropical Paradise",
+    bg: "bg-gradient-to-br from-lime-200 via-green-300 to-emerald-400",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-lime-200 via-green-300 to-emerald-400",
+  },
+  {
+    name: "Midnight Blue",
+    bg: "bg-gradient-to-br from-slate-800 to-blue-900",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-slate-800 to-blue-900",
+  },
+  {
+    name: "Deep Forest",
+    bg: "bg-gradient-to-br from-green-800 to-emerald-900",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-green-800 to-emerald-900",
+  },
+  {
+    name: "Royal Purple",
+    bg: "bg-gradient-to-br from-purple-800 to-indigo-900",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-purple-800 to-indigo-900",
+  },
+  {
+    name: "Charcoal",
+    bg: "bg-gradient-to-br from-gray-800 to-slate-900",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-gray-800 to-slate-900",
+  },
+  {
+    name: "Wine Red",
+    bg: "bg-gradient-to-br from-red-800 to-rose-900",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-red-800 to-rose-900",
+  },
+  {
+    name: "Electric Blue",
+    bg: "bg-gradient-to-br from-cyan-200 to-blue-300",
+    text: "text-gray-900",
+    preview: "bg-gradient-to-br from-cyan-200 to-blue-300",
+  },
+  {
+    name: "Neon Gradient",
+    bg: "bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600",
+  },
+  {
+    name: "Warm Sunset",
+    bg: "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600",
+    text: "text-white",
+    preview: "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600",
+  },
 ]
 
 const VISIBILITY_OPTIONS = [
@@ -59,699 +208,801 @@ const VISIBILITY_OPTIONS = [
   { value: "private", label: "Private", icon: Lock, description: "Only you can see this ink" },
 ]
 
+const FONT_SIZES = [
+  { name: "Small", value: "text-sm", size: 14 },
+  { name: "Medium", value: "text-base", size: 16 },
+  { name: "Large", value: "text-lg", size: 18 },
+  { name: "Extra Large", value: "text-xl", size: 20 },
+]
+
+// Dynamic placeholder messages - carefully curated to avoid duplicate themes
 const PLACEHOLDER_MESSAGES = [
-  "What's on your mind today?",
-  "Start a new story, poem, or thought...",
-  "Share your inspiration with the world!",
-  "Let your creativity flow here...",
-  "Write something that made you smile today.",
-  "Jot down a memory, a dream, or a wish...",
-  "What would you say to your future self?",
-  "Describe a moment you'll never forget.",
-  "Express yourself—no filters, just you.",
-  "Begin with a single word...",
-]
-
-const COLOR_PALETTES = [
-  {
-    name: "Default",
-    bg: "bg-white dark:bg-gray-900",
-    preview: "bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Sunset Glow",
-    bg: "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400 dark:from-yellow-300 dark:via-pink-300 dark:to-pink-500",
-    preview: "bg-gradient-to-br from-yellow-200 via-pink-200 to-pink-400",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Ocean Depths",
-    bg: "bg-gradient-to-br from-cyan-200 via-blue-200 to-blue-400 dark:from-cyan-300 dark:via-blue-300 dark:to-blue-500",
-    preview: "bg-gradient-to-br from-cyan-200 via-blue-200 to-blue-400",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Midnight Sky",
-    bg: "bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900",
-    preview: "bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900",
-    text: "text-white",
-  },
-  {
-    name: "Vintage Paper",
-    bg: "bg-gradient-to-br from-yellow-100 via-yellow-50 to-white dark:from-yellow-200 dark:via-yellow-100 dark:to-gray-100",
-    preview: "bg-gradient-to-br from-yellow-100 via-yellow-50 to-white",
-    text: "text-gray-900",
-  },
-  {
-    name: "Mint",
-    bg: "bg-gradient-to-br from-green-100 via-teal-100 to-green-300 dark:from-green-200 dark:via-teal-200 dark:to-green-400",
-    preview: "bg-gradient-to-br from-green-100 via-teal-100 to-green-300",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Rose",
-    bg: "bg-gradient-to-br from-pink-100 via-pink-200 to-pink-300 dark:from-pink-200 dark:via-pink-300 dark:to-pink-400",
-    preview: "bg-gradient-to-br from-pink-100 via-pink-200 to-pink-300",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Lavender",
-    bg: "bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300 dark:from-purple-200 dark:via-purple-300 dark:to-purple-400",
-    preview: "bg-gradient-to-br from-purple-100 via-purple-200 to-purple-300",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Amber Bloom",
-    bg: "bg-gradient-to-br from-amber-200 via-amber-300 to-orange-200 dark:from-amber-300 dark:via-amber-400 dark:to-orange-300",
-    preview: "bg-gradient-to-br from-amber-200 via-amber-300 to-orange-200",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Cocoa Dust",
-    bg: "bg-gradient-to-br from-stone-400 via-stone-300 to-stone-100 dark:from-stone-500 dark:via-stone-400 dark:to-stone-200",
-    preview: "bg-gradient-to-br from-stone-400 via-stone-300 to-stone-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Sage Whisper",
-    bg: "bg-gradient-to-br from-green-200 via-lime-100 to-emerald-200 dark:from-green-300 dark:via-lime-200 dark:to-emerald-300",
-    preview: "bg-gradient-to-br from-green-200 via-lime-100 to-emerald-200",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Coral Dream",
-    bg: "bg-gradient-to-br from-pink-200 via-rose-200 to-orange-100 dark:from-pink-300 dark:via-rose-300 dark:to-orange-200",
-    preview: "bg-gradient-to-br from-pink-200 via-rose-200 to-orange-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Blueberry Frost",
-    bg: "bg-gradient-to-br from-blue-100 via-blue-200 to-indigo-200 dark:from-blue-200 dark:via-blue-300 dark:to-indigo-300",
-    preview: "bg-gradient-to-br from-blue-100 via-blue-200 to-indigo-200",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Peach Cloud",
-    bg: "bg-gradient-to-br from-orange-100 via-pink-100 to-yellow-100 dark:from-orange-200 dark:via-pink-200 dark:to-yellow-200",
-    preview: "bg-gradient-to-br from-orange-100 via-pink-100 to-yellow-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Forest Haze",
-    bg: "bg-gradient-to-br from-green-900 via-green-700 to-emerald-600",
-    preview: "bg-gradient-to-br from-green-900 via-green-700 to-emerald-600",
-    text: "text-white",
-  },
-  {
-    name: "Slate Mist",
-    bg: "bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 dark:from-slate-300 dark:via-slate-400 dark:to-slate-500",
-    preview: "bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Berry Crush",
-    bg: "bg-gradient-to-br from-fuchsia-200 via-pink-300 to-purple-300 dark:from-fuchsia-300 dark:via-pink-400 dark:to-purple-400",
-    preview: "bg-gradient-to-br from-fuchsia-200 via-pink-300 to-purple-300",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Golden Hour",
-    bg: "bg-gradient-to-br from-yellow-300 via-orange-200 to-amber-100 dark:from-yellow-400 dark:via-orange-300 dark:to-amber-200",
-    preview: "bg-gradient-to-br from-yellow-300 via-orange-200 to-amber-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Cloud Nine",
-    bg: "bg-gradient-to-br from-white via-blue-50 to-sky-100 dark:from-gray-100 dark:via-blue-100 dark:to-sky-200",
-    preview: "bg-gradient-to-br from-white via-blue-50 to-sky-100",
-    text: "text-gray-900",
-  },
-  {
-    name: "Charcoal Ink",
-    bg: "bg-gradient-to-br from-gray-900 via-gray-700 to-gray-600",
-    preview: "bg-gradient-to-br from-gray-900 via-gray-700 to-gray-600",
-    text: "text-white",
-  },
-  {
-    name: "Plum Velvet",
-    bg: "bg-gradient-to-br from-purple-900 via-fuchsia-800 to-purple-700",
-    preview: "bg-gradient-to-br from-purple-900 via-fuchsia-800 to-purple-700",
-    text: "text-white",
-  },
-  {
-    name: "Sandstone",
-    bg: "bg-gradient-to-br from-yellow-200 via-stone-200 to-stone-100 dark:from-yellow-300 dark:via-stone-300 dark:to-stone-200",
-    preview: "bg-gradient-to-br from-yellow-200 via-stone-200 to-stone-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Aqua Breeze",
-    bg: "bg-gradient-to-br from-cyan-100 via-teal-100 to-blue-100 dark:from-cyan-200 dark:via-teal-200 dark:to-blue-200",
-    preview: "bg-gradient-to-br from-cyan-100 via-teal-100 to-blue-100",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-  {
-    name: "Ruby Blush",
-    bg: "bg-gradient-to-br from-rose-300 via-pink-400 to-red-300 dark:from-rose-400 dark:via-pink-500 dark:to-red-400",
-    preview: "bg-gradient-to-br from-rose-300 via-pink-400 to-red-300",
-    text: "text-gray-900 dark:text-gray-100",
-  },
-]
-
-const FONT_MOODS = [
-  { name: "Gentle (Serif)", value: "font-serif" },
-  { name: "Bold (Sans)", value: "font-sans font-bold" },
-  { name: "Script (Cursive)", value: "font-cursive" },
-  { name: "Typewriter", value: "font-mono" },
-]
-
-const MOOD_PILLS = [
-  { name: "Bold", icon: "🔥" },
-  { name: "Thoughtful", icon: "💭" },
-  { name: "Healing", icon: "🌿" },
-  { name: "Dreamy", icon: "🌌" },
-]
-
-const POPULAR_TAGS = [
-  "poetry",
-  "thoughts",
-  "inspiration",
-  "love",
-  "life",
-  "growth",
-  "healing",
-  "dreams",
-  "memories",
-  "wisdom",
-  "hope",
-  "journey",
-  "reflection",
-  "gratitude",
-  "mindfulness",
-]
-
-const ACHIEVEMENTS = [
-  { id: "first_ink", name: "First Ink", description: "Published your first ink", icon: "🖋️", unlocked: false },
-  { id: "wordsmith", name: "Wordsmith", description: "Wrote 1000+ words across all inks", icon: "✍️", unlocked: false },
-  { id: "tag_master", name: "Tag Master", description: "Used 50+ unique tags", icon: "🏷️", unlocked: false },
-  {
-    id: "vibe_creator",
-    name: "Vibe Creator",
-    description: "Published inks with 5+ different themes",
-    icon: "🎨",
-    unlocked: false,
-  },
-]
-
-const DRAFT_NUDGES = [
-  "Your thoughts are waiting to be shared with the world 💭",
-  "That draft is looking lonely - give it some love! ✨",
-  "Your creativity deserves to see the light 🌟",
-  "Time to turn those words into magic ✍️",
-  "Your story is ready to inspire others 🚀",
-  "Don't let your beautiful words gather dust 📝",
-  "Your draft is calling - it wants to be published! 📢",
-  "Those thoughts deserve to be heard 💫",
+  "What's inspiring you today? ✨",
+  "Share a thought that's been on your mind...",
+  "Write about a moment that changed you 🌟",
+  "What would you tell your younger self?",
+  "Describe your perfect day in detail...",
+  "Share a lesson you learned recently 📚",
+  "What are you grateful for right now?",
+  "Write about a dream you're chasing ✨",
+  "Share a memory that makes you smile 😊",
+  "What's something you wish more people knew?",
+  "Describe a place that feels like home 🏠",
+  "Write about overcoming a challenge...",
+  "Share your thoughts on kindness 💝",
+  "What does success mean to you?",
+  "Write about a book that changed your perspective 📖",
+  "Share advice you'd give to everyone",
+  "Describe your ideal creative space 🎨",
+  "What's a small joy in your daily life?",
+  "Write about someone who inspires you ⭐",
+  "Share your thoughts on personal growth 🌱",
 ]
 
 const MAX_CHARACTERS = 5000
 const MIN_CHARACTERS = 15
-const MAX_TAGS = 2
+const MAX_HASHTAGS = 2
 
 interface DraftData {
   id: string
-  text: string
-  tags: string[]
-  visibility: string
+  content: string
   theme: number
-  font: string
-  mood: string
+  fontSize: number
+  visibility: string
   timestamp: string
   wordCount: number
-  lastModified: string
-  title?: string
 }
 
-// Add a type for Achievement
-interface Achievement {
-  id: string
-  name: string
-  description: string
-  icon: string
-  unlocked: boolean
+interface ContentValidationResult {
+  errors: string[]
+  warnings: string[]
+  criticalIssues: string[]
+  mentalHealthWarning: boolean
+  hashtags: string[]
 }
 
-// Change inputWarning type
-type InputWarningType = React.ReactNode | null
+// Enhanced hashtag validation
+const validateHashtags = (content: string) => {
+  const hashtags = content.match(/#\w+/g) || []
+  const errors: string[] = []
+  const warnings: string[] = []
+
+  // Check maximum hashtags
+  if (hashtags.length > MAX_HASHTAGS) {
+    errors.push(`Maximum ${MAX_HASHTAGS} hashtags allowed. Found ${hashtags.length}.`)
+  }
+
+  // Check for duplicate hashtags (case-insensitive)
+  const normalizedHashtags = hashtags.map((tag) => tag.toLowerCase())
+  const uniqueHashtags = new Set(normalizedHashtags)
+
+  if (normalizedHashtags.length !== uniqueHashtags.size) {
+    const duplicates = normalizedHashtags.filter((tag, index) => normalizedHashtags.indexOf(tag) !== index)
+    warnings.push(`Duplicate hashtags detected: ${[...new Set(duplicates)].join(", ")}`)
+  }
+
+  // Check hashtag length
+  const longHashtags = hashtags.filter((tag) => tag.length > 20)
+  if (longHashtags.length > 0) {
+    warnings.push(`Some hashtags are too long. Keep them under 20 characters.`)
+  }
+
+  // Check for hashtags with numbers only
+  const numberOnlyHashtags = hashtags.filter((tag) => /^#\d+$/.test(tag))
+  if (numberOnlyHashtags.length > 0) {
+    warnings.push(`Avoid hashtags with only numbers: ${numberOnlyHashtags.join(", ")}`)
+  }
+
+  return { errors, warnings, hashtags: [...uniqueHashtags] }
+}
+
+// Comprehensive content validation
+const validateContent = (content: string): InkValidationResult => {
+  const errors: string[] = []
+  const warnings: string[] = []
+  const criticalIssues: string[] = []
+  let mentalHealthWarning = false
+
+  // Basic validation
+  if (!content.trim()) {
+    errors.push("Content cannot be empty")
+    return { errors, warnings, nudges: [], detectedType: "unknown" }
+  }
+
+  // Length validation
+  if (content.length < MIN_CHARACTERS) {
+    warnings.push(`Content is too short. Minimum ${MIN_CHARACTERS} characters required.`)
+  }
+
+  if (content.length > MAX_CHARACTERS) {
+    errors.push(`Content exceeds maximum length of ${MAX_CHARACTERS} characters.`)
+  }
+
+  // Sanitize content for validation
+  const sanitizedContent = sanitizeInput(content)
+
+  // Critical content filters
+  if (containsProfanity(sanitizedContent)) {
+    criticalIssues.push("Content contains inappropriate language. Please revise your message.")
+  }
+
+  if (containsHateSpeech(sanitizedContent)) {
+    criticalIssues.push("Content may contain hate speech or discriminatory language.")
+  }
+
+  if (containsNSFWContent(sanitizedContent)) {
+    criticalIssues.push("Content appears to contain adult or explicit material.")
+  }
+
+  if (containsViolence(sanitizedContent)) {
+    criticalIssues.push("Content contains violent or threatening language.")
+  }
+
+  if (containsForbiddenTopic(sanitizedContent)) {
+    criticalIssues.push("Content discusses topics that are not allowed on this platform.")
+  }
+
+  // Mental health risk detection
+  if (containsMentalHealthRisk(sanitizedContent)) {
+    mentalHealthWarning = true
+    warnings.push("Your content mentions mental health topics. Please consider reaching out for support if needed.")
+  }
+
+  // Quality and spam filters
+  if (isOnlyPunctuationOrWhitespace(sanitizedContent)) {
+    errors.push("Content cannot be only punctuation or whitespace.")
+  }
+
+  if (isEmojiSpam(content)) {
+    warnings.push("Consider reducing emoji usage for better readability.")
+  }
+
+  if (isRepeatedCharSpam(content)) {
+    warnings.push("Avoid excessive repeated characters.")
+  }
+
+  if (containsLink(content)) {
+    errors.push("Links are not allowed in ink content.")
+  }
+
+  if (containsClickbait(sanitizedContent)) {
+    warnings.push("Content may contain clickbait patterns. Consider a more authentic approach.")
+  }
+
+  if (containsImpersonation(sanitizedContent)) {
+    warnings.push("Content may reference public figures. Ensure you're not impersonating anyone.")
+  }
+
+  // Additional quality checks
+  const wordsInCaps = content.match(/\b[A-Z]{3,}\b/g) || []
+  if (wordsInCaps.length > 3) {
+    warnings.push("Avoid excessive use of ALL CAPS.")
+  }
+
+  const specialCharCount = (content.match(/[!@#$%^&*()_+=[\]{}|;':",./<>?~`]/g) || []).length
+  if (specialCharCount > content.length * 0.3) {
+    warnings.push("Too many special characters. Consider using more natural language.")
+  }
+
+  // Hashtag validation
+  const hashtagValidation = validateHashtags(content)
+  errors.push(...hashtagValidation.errors)
+  warnings.push(...hashtagValidation.warnings)
+
+  return {
+    errors,
+    warnings,
+    nudges: [], // No nudges in this simplified version
+    detectedType: "unknown",
+  }
+}
+
+// XP calculation based on content analysis
+const calculateXP = (content: string, validation: InkValidationResult) => {
+  let xp = 0
+  const words = content
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+  const wordCount = words.length
+  const charCount = content.length
+
+  // Base XP for word count
+  if (wordCount >= 10) xp += 10
+  if (wordCount >= 50) xp += 20
+  if (wordCount >= 100) xp += 30
+  if (wordCount >= 200) xp += 40
+
+  // Character bonus
+  if (charCount >= 100) xp += 5
+  if (charCount >= 500) xp += 15
+  if (charCount >= 1000) xp += 25
+
+  // Content quality bonuses
+  const sentences = content.split(/[.!?]+/).filter((s) => s.trim().length > 0)
+  if (sentences.length >= 3) xp += 10 // Multiple sentences
+
+  // Emotional words bonus
+  const emotionalWords = [
+    "love",
+    "hope",
+    "dream",
+    "inspire",
+    "grateful",
+    "amazing",
+    "beautiful",
+    "wonderful",
+    "incredible",
+    "fantastic",
+    "brilliant",
+    "awesome",
+    "perfect",
+    "happy",
+    "joy",
+    "peace",
+    "success",
+    "achievement",
+    "victory",
+    "triumph",
+  ]
+  const emotionalCount = emotionalWords.filter((word) => content.toLowerCase().includes(word)).length
+  xp += emotionalCount * 3
+
+  // Question bonus (encourages engagement)
+  const questionCount = (content.match(/\?/g) || []).length
+  xp += questionCount * 5
+
+  // Creativity bonus for varied punctuation
+  const punctuationVariety = new Set(content.match(/[.!?;:,]/g) || []).size
+  if (punctuationVariety >= 3) xp += 10
+
+  // Penalties for quality issues
+  xp -= validation.warnings.length * 2
+  xp -= validation.errors.length * 20
+
+  // No XP for content with critical issues
+  if (validation.errors.length > 0) {
+    xp = 0
+  }
+
+  return Math.max(0, Math.min(xp, 200)) // Cap at 200 XP, minimum 0
+}
+
+// Helper function to calculate reading time
+const calculateReadingTime = (text: string) => {
+  const wordsPerMinute = 200
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length
+  const minutes = Math.ceil(words / wordsPerMinute)
+  return {
+    text: `${minutes} min read`,
+    minutes,
+    words,
+  }
+}
 
 export default function CreatePage() {
   const router = useRouter()
   const { playSound } = useSoundEffects()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Form state
+  // Content state
   const [content, setContent] = useState("")
-  const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState("")
-  const [mood, setMood] = useState("")
+  const [selectedTheme, setSelectedTheme] = useState(0)
+  const [fontSize, setFontSize] = useState(1)
   const [visibility, setVisibility] = useState("public")
 
-  // Validation state
-  const [contentValidation, setContentValidation] = useState<ValidationResult>({
-    isValid: false,
-    errors: [],
-    warnings: [],
-    score: 0,
-  })
-  const [tagsValidation, setTagsValidation] = useState<ValidationResult>({
-    isValid: true,
-    errors: [],
-    warnings: [],
-    score: 100,
-  })
-  const [contentWarnings, setContentWarnings] = useState<ContentWarning[]>([])
-  const [xpPreview, setXpPreview] = useState(0)
-
   // UI state
-  const [showReadyModal, setShowReadyModal] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [showDrafts, setShowDrafts] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
-  const [isDraftSaved, setIsDraftSaved] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [drafts, setDrafts] = useState<DraftData[]>([])
+  const [currentPlaceholder, setCurrentPlaceholder] = useState("")
 
-  // Auto-save draft
-  const saveDraft = useCallback(() => {
-    if (content.trim() || tags.length > 0) {
-      localStorage.setItem(
-        "inkly-draft",
-        JSON.stringify({
-          content,
-          tags,
-          mood,
-          visibility,
-          timestamp: Date.now(),
-        }),
-      )
-      setIsDraftSaved(true)
-      setTimeout(() => setIsDraftSaved(false), 2000)
-    }
-  }, [content, tags, mood, visibility])
+  // Validation state
+  // Use the new InkValidationResult type for validation state
+  const [validation, setValidation] = useState<InkValidationResult>({
+    errors: [],
+    warnings: [],
+    nudges: [],
+    detectedType: "unknown",
+  })
 
-  // Load draft on mount
+  // Add state for user interaction
+  const [hasInteracted, setHasInteracted] = useState(false)
+
+  // Word count and XP
+  const wordCount = content
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length
+  const charCount = content.length
+  const xpPoints = calculateXP(content, validation)
+
+  // Dynamic placeholder rotation
   useEffect(() => {
-    const draft = localStorage.getItem("inkly-draft")
-    if (draft) {
-      try {
-        const parsed = JSON.parse(draft)
-        // Only load if draft is less than 24 hours old
-        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-          setContent(parsed.content || "")
-          setTags(parsed.tags || [])
-          setMood(parsed.mood || "")
-          setVisibility(parsed.visibility || "public")
-        }
-      } catch (error) {
-        console.error("Failed to load draft:", error)
-      }
+    const getRandomPlaceholder = () => {
+      const randomIndex = Math.floor(Math.random() * PLACEHOLDER_MESSAGES.length)
+      return PLACEHOLDER_MESSAGES[randomIndex]
     }
 
-    // Load user preferences
-    const savedVisibility = localStorage.getItem("inkly-default-visibility")
-    if (savedVisibility) {
-      setVisibility(savedVisibility)
+    setCurrentPlaceholder(getRandomPlaceholder())
+
+    // Change placeholder every 10 seconds when textarea is empty
+    const interval = setInterval(() => {
+      if (!content.trim()) {
+        setCurrentPlaceholder(getRandomPlaceholder())
+      }
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [content])
+
+  // Auto-save functionality
+  const saveDraft = useCallback(() => {
+    if (content.trim() && validation.errors.length === 0) {
+      const draft: DraftData = {
+        id: Date.now().toString(),
+        content,
+        theme: selectedTheme,
+        fontSize,
+        visibility,
+        timestamp: new Date().toISOString(),
+        wordCount,
+      }
+
+      const existingDrafts = JSON.parse(localStorage.getItem("inkly-drafts") || "[]")
+      const updatedDrafts = [draft, ...existingDrafts.slice(0, 9)] // Keep only 10 drafts
+      localStorage.setItem("inkly-drafts", JSON.stringify(updatedDrafts))
+      setDrafts(updatedDrafts)
+      setLastSaved(new Date())
     }
+  }, [content, selectedTheme, fontSize, visibility, wordCount, validation.errors])
+
+  // Load drafts on mount
+  useEffect(() => {
+    const savedDrafts = JSON.parse(localStorage.getItem("inkly-drafts") || "[]")
+    setDrafts(savedDrafts)
   }, [])
 
-  // Auto-save draft on blur/change (debounced)
+  // Auto-save every 3 seconds
   useEffect(() => {
-    const timer = setTimeout(saveDraft, 2000)
+    const timer = setTimeout(saveDraft, 3000)
     return () => clearTimeout(timer)
   }, [saveDraft])
 
-  // Validate content in real-time
+  // Content validation
   useEffect(() => {
-    const validation = validateTextContent(content)
-    setContentValidation(validation)
+    setValidation(validateInkContent(content))
+  }, [content])
 
-    const warnings = detectContentWarnings(content)
-    setContentWarnings(warnings)
-
-    const xp = calculateXPPreview(content, tags)
-    setXpPreview(xp)
-
-    // Auto-suggest tags based on content
-    if (content.length > 50) {
-      const suggestions = suggestTags(content).filter((tag) => !tags.includes(tag))
-      setSuggestedTags(suggestions.slice(0, 3))
-    } else {
-      setSuggestedTags([])
-    }
-  }, [content, tags])
-
-  // Validate tags
-  useEffect(() => {
-    const validation = validateTags(tags)
-    setTagsValidation(validation)
-  }, [tags])
-
-  // Handle tag input
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault()
-      addTag(tagInput.trim())
-    }
-  }
-
-  const addTag = (tagText: string) => {
-    if (!tagText) return
-
-    const cleanedTags = cleanTags([...tags, tagText])
-    if (cleanedTags.length <= 2 && !tags.includes(tagText.toLowerCase())) {
-      setTags(cleanedTags)
-      setTagInput("")
-      playSound("click")
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-    playSound("click")
-  }
-
-  const handleSubmit = async () => {
-    if (!contentValidation.isValid) {
-      playSound("error")
+  const handlePublish = () => {
+    if (validation.errors.length > 0 || validation.warnings.length > 0 || content.trim().length < MIN_CHARACTERS) {
+      playSound("modalClose") // was 'error', now using closest available
       return
     }
-
-    setShowReadyModal(true)
+    setShowPreview(true)
   }
 
-  const handleConfirmSubmit = async () => {
+  const confirmPublish = async () => {
     setIsSubmitting(true)
-
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      const detectedType = detectInkType(content)
       const readingTime = calculateReadingTime(content)
+      const inkType = detectInkType(content)
 
       const newInk = {
         id: generateRandomInkId(),
         content: content.trim(),
-        author: "You", // Would be actual user name
+        author: "You",
         username: "you",
         createdAt: new Date().toISOString(),
         readingTime: readingTime.text,
         views: "0",
-        tags: tags,
-        mood: mood || undefined,
-        type: detectedType || undefined,
+        type: inkType,
+        theme: selectedTheme,
+        visibility,
+        tags: [], // No hashtags in new validation system
       }
 
-      // Save to localStorage (would be API call in real app)
       const existingInks = JSON.parse(localStorage.getItem("inkly-inks") || "[]")
       existingInks.unshift(newInk)
       localStorage.setItem("inkly-inks", JSON.stringify(existingInks))
 
-      // Clear draft
-      localStorage.removeItem("inkly-draft")
+      // Clear current draft
+      localStorage.removeItem("inkly-current-draft")
 
-      // Save user preferences
-      localStorage.setItem("inkly-default-visibility", visibility)
-
-      playSound("success")
+      playSound("click") // was 'success', now using closest available
       router.push(`/ink/${newInk.id}`)
     } catch (error) {
-      console.error("Failed to create ink:", error)
-      playSound("error")
+      console.error("Failed to publish ink:", error)
+      playSound("modalClose") // was 'error', now using closest available
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const isFormValid = contentValidation.isValid && tagsValidation.isValid
+  const loadDraft = (draft: DraftData) => {
+    setContent(draft.content)
+    setSelectedTheme(draft.theme)
+    setFontSize(draft.fontSize)
+    setVisibility(draft.visibility)
+    setShowDrafts(false)
+    textareaRef.current?.focus()
+  }
+
+  const deleteDraft = (draftId: string) => {
+    const updatedDrafts = drafts.filter((d) => d.id !== draftId)
+    setDrafts(updatedDrafts)
+    localStorage.setItem("inkly-drafts", JSON.stringify(updatedDrafts))
+  }
+
+  const currentTheme = BACKGROUND_THEMES[selectedTheme]
+  const currentFontSize = FONT_SIZES[fontSize]
+  const readingTime = calculateReadingTime(content)
+
+  const canPublish = validation.errors.length === 0 && content.trim().length >= MIN_CHARACTERS
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex">
-        <SideNav />
-        <main className="flex-1 px-4 py-6 max-w-4xl mx-auto">
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold">Create New Ink</h1>
-                <p className="text-muted-foreground mt-1">Share your thoughts with the world</p>
-              </div>
+    <div className={`min-h-screen w-full ${currentTheme.bg} ${currentTheme.text} transition-all duration-300`}>
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2"
+          aria-label="Go back to home"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
 
-              {isDraftSaved && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center gap-2 text-sm text-green-600"
-                >
-                  <Save className="w-4 h-4" />
-                  Draft saved
-                </motion.div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Content Input */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-600" />
-                      Your Ink
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Textarea
-                        placeholder="What's on your mind? Share a thought, poem, quote, or story..."
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        className="min-h-[200px] text-lg leading-relaxed resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        maxLength={5000}
-                      />
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>{content.length}/5000 characters</span>
-                        {content.length >= 15 && (
-                          <span className="text-green-600">
-                            <CheckCircle className="w-4 h-4 inline mr-1" />
-                            Minimum length reached
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Validation Feedback */}
-                    <InkValidationFeedback
-                      validation={contentValidation}
-                      warnings={contentWarnings}
-                      xpPreview={xpPreview}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Tags */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Plus className="w-5 h-5 text-blue-600" />
-                      Tags (Optional)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                            #{tag}
-                            <button
-                              onClick={() => removeTag(tag)}
-                              className="ml-1 hover:text-red-600"
-                              aria-label={`Remove ${tag} tag`}
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {tags.length < 2 && (
-                        <Input
-                          placeholder="Add a tag..."
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyPress={handleTagKeyPress}
-                          onBlur={() => addTag(tagInput.trim())}
-                          maxLength={20}
-                        />
-                      )}
-
-                      <p className="text-xs text-muted-foreground">
-                        {tags.length}/2 tags used. Press Enter or comma to add.
-                      </p>
-                    </div>
-
-                    {/* Suggested Tags */}
-                    {suggestedTags.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Lightbulb className="w-4 h-4" />
-                          Suggested tags:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {suggestedTags.map((tag) => (
-                            <Button
-                              key={tag}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addTag(tag)}
-                              className="h-auto py-1 px-2 text-xs"
-                            >
-                              #{tag}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Sidebar */}
-              <div className="space-y-6">
-                {/* Mood Selection */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Mood</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-2">
-                      {MOODS.map((moodOption) => (
-                        <Button
-                          key={moodOption.value}
-                          variant={mood === moodOption.value ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setMood(mood === moodOption.value ? "" : moodOption.value)}
-                          className="justify-start h-auto py-2"
-                        >
-                          {moodOption.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Visibility */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Visibility</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Select value={visibility} onValueChange={setVisibility}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VISIBILITY_OPTIONS.map((option) => {
-                          const Icon = option.icon
-                          return (
-                            <SelectItem key={option.value} value={option.value}>
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-4 h-4" />
-                                <div>
-                                  <div className="font-medium">{option.label}</div>
-                                  <div className="text-xs text-muted-foreground">{option.description}</div>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
-
-                {/* XP Preview */}
-                {isFormValid && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-purple-600" />
-                            <span className="font-medium">You'll earn</span>
-                          </div>
-                          <Badge className="bg-purple-600 text-white">+{xpPreview} XP</Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )}
-
-                {/* Submit Button */}
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || isSubmitting}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  size="lg"
-                >
-                  {isSubmitting ? (
-                    <motion.div className="flex items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <motion.div
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                      />
-                      Creating...
-                    </motion.div>
-                  ) : (
-                    <>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview & Publish
-                    </>
-                  )}
-                </Button>
-
-                {!isFormValid && (
-                  <div className="text-sm text-muted-foreground text-center">
-                    <AlertTriangle className="w-4 h-4 inline mr-1" />
-                    Please fix the issues above to continue
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </main>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {lastSaved && <span>Saved {lastSaved.toLocaleTimeString()}</span>}
+          <Save className="w-4 h-4" />
+        </div>
       </div>
 
-      {/* Ready to Ink Modal */}
-      <ReadyToInkModal
-        open={showReadyModal}
-        onClose={() => setShowReadyModal(false)}
-        onConfirm={handleConfirmSubmit}
-        inkData={{
-          content,
-          tags,
-          mood,
-          type: detectInkType(content),
-          visibility,
-        }}
-        xpPreview={xpPreview}
-        isSubmitting={isSubmitting}
-      />
+      {/* Main Writing Area */}
+      <div className="pt-16 pb-24 px-4 h-screen flex flex-col">
+        <div className="flex-1 max-w-4xl mx-auto w-full">
+          <Textarea
+            ref={textareaRef}
+            placeholder={currentPlaceholder}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value)
+              if (!hasInteracted) setHasInteracted(true)
+            }}
+            onBlur={() => setHasInteracted(true)}
+            className={`
+              w-full h-full resize-none border-0 bg-transparent
+              ${currentFontSize.value} leading-relaxed
+              focus-visible:ring-0 focus-visible:ring-offset-0
+              placeholder:text-muted-foreground/50
+              ${validation.errors.length > 0 ? "text-red-600" : ""}
+            `}
+            style={{ fontSize: `${currentFontSize.size}px` }}
+            maxLength={MAX_CHARACTERS}
+            aria-label="Write your ink content"
+            aria-describedby="word-counter validation-messages"
+          />
+        </div>
+
+        {/* Word Counter with XP Preview */}
+        <div
+          id="word-counter"
+          className="absolute bottom-28 right-6 text-sm text-muted-foreground bg-background/80 backdrop-blur-sm rounded-lg px-3 py-1"
+        >
+          <div className="flex items-center gap-3">
+            <span>
+              {wordCount} words • {charCount}/{MAX_CHARACTERS}
+            </span>
+            {xpPoints > 0 && validation.errors.length === 0 && (
+              <div className="flex items-center gap-1 text-purple-600">
+                <Zap className="w-3 h-3" />
+                <span className="font-medium">+{xpPoints} XP</span>
+              </div>
+            )}
+            {validation.errors.length > 0 && (
+              <div className="flex items-center gap-1 text-red-600">
+                <Shield className="w-3 h-3" />
+                <span className="font-medium">Blocked</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Validation Messages */}
+      <AnimatePresence>
+        {hasInteracted && (validation.errors.length > 0 || validation.warnings.length > 0) && (
+          <motion.div
+            id="validation-messages"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute top-20 left-4 right-4 z-20"
+          >
+            <Card className="max-w-md mx-auto">
+              <CardContent className="p-4 space-y-2">
+                {/* Errors */}
+                {validation.errors.map((error, index) => (
+                  <div key={index} className="flex items-center gap-2 text-red-600" role="alert">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="text-sm">{error}</span>
+                  </div>
+                ))}
+                {/* Warnings */}
+                {validation.warnings.map((warning, index) => (
+                  <div key={index} className="flex items-center gap-2 text-yellow-600" role="alert">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm">{warning}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Toolbar */}
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30">
+        <Card className="bg-background/95 backdrop-blur-sm border shadow-lg">
+          <CardContent className="p-2">
+            <div className="flex items-center gap-2">
+              {/* Background Theme Selector */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Change background theme">
+                    <Palette className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="center">
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Background Themes</h4>
+                    <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+                      {BACKGROUND_THEMES.map((theme, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedTheme(index)}
+                          className={`
+                            w-12 h-12 rounded-lg ${theme.preview} border-2 transition-all
+                            ${selectedTheme === index ? "border-primary ring-2 ring-primary/20" : "border-gray-200 hover:border-gray-300"}
+                          `}
+                          aria-label={`Select ${theme.name} theme`}
+                          title={theme.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Font Size */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" aria-label="Change font size">
+                    <Type className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="center">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Font Size</h4>
+                    {FONT_SIZES.map((size, index) => (
+                      <Button
+                        key={index}
+                        variant={fontSize === index ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setFontSize(index)}
+                        className="w-full justify-start"
+                      >
+                        {size.name} ({size.size}px)
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Visibility */}
+              <Select value={visibility} onValueChange={setVisibility}>
+                <SelectTrigger className="w-auto border-0 bg-transparent" aria-label="Set visibility">
+                  <div className="flex items-center gap-2">
+                    {visibility === "public" && <Globe className="w-4 h-4" />}
+                    {visibility === "followers" && <Users className="w-4 h-4" />}
+                    {visibility === "private" && <Lock className="w-4 h-4" />}
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {VISIBILITY_OPTIONS.map((option) => {
+                    const Icon = option.icon
+                    return (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          <div>
+                            <div className="font-medium">{option.label}</div>
+                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+
+              {/* Drafts */}
+              <Button variant="ghost" size="sm" onClick={() => setShowDrafts(true)} aria-label="View drafts">
+                <FileText className="w-4 h-4" />
+                {drafts.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {drafts.length}
+                  </Badge>
+                )}
+              </Button>
+
+              {/* Publish Button */}
+              <Button
+                onClick={handlePublish}
+                disabled={!canPublish}
+                className={`${
+                  canPublish
+                    ? "bg-purple-600 hover:bg-purple-700 text-white"
+                    : "bg-gray-400 cursor-not-allowed text-gray-200"
+                }`}
+                aria-label="Publish ink"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Ink It
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Preview Your Ink</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className={`p-6 rounded-lg ${currentTheme.bg} ${currentTheme.text}`}>
+              <div className={`${currentFontSize.value} leading-relaxed whitespace-pre-wrap`}>{content}</div>
+            </div>
+
+            {/* Content Safety Status */}
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-900 dark:text-green-100">Content Safety: Approved</span>
+              </div>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                Your content has passed all safety and quality checks.
+              </p>
+            </div>
+
+            {/* XP Reward Display */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-full">
+                    <Trophy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-purple-900 dark:text-purple-100">XP Reward</h4>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      Great content! You'll earn XP for this ink.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">+{xpPoints}</span>
+                </div>
+              </div>
+
+              {/* XP Breakdown */}
+              <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-700">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-purple-700 dark:text-purple-300">Words:</span>
+                    <span className="font-medium">{wordCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-purple-700 dark:text-purple-300">Reading time:</span>
+                    <span className="font-medium">{readingTime.text}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-purple-700 dark:text-purple-300">Visibility:</span>
+                    <span className="font-medium capitalize">{visibility}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                {wordCount} words • {readingTime.text}
+              </span>
+              <span>Visibility: {visibility}</span>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowPreview(false)}>
+                Edit More
+              </Button>
+              <Button
+                onClick={confirmPublish}
+                disabled={isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSubmitting ? (
+                  <motion.div
+                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                  />
+                ) : (
+                  "Publish Ink"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Drafts Modal */}
+      <Dialog open={showDrafts} onOpenChange={setShowDrafts}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Your Drafts</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-96">
+            <div className="space-y-3">
+              {drafts.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No drafts yet</p>
+              ) : (
+                drafts.map((draft) => (
+                  <Card key={draft.id} className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1" onClick={() => loadDraft(draft)}>
+                          <p className="text-sm line-clamp-2 mb-2">{draft.content.substring(0, 100)}...</p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{draft.wordCount} words</span>
+                            <span>{new Date(draft.timestamp).toLocaleDateString()}</span>
+                            <span className="capitalize">{draft.visibility}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDraft(draft.id)
+                          }}
+                          aria-label="Delete draft"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

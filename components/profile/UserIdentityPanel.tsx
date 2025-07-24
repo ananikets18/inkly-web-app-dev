@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/user-badges"
 import EditProfileModal from "./EditProfileModal"
 import ShareProfileModal from "@/components/ShareProfileModal"
+import ReportModal from "../ReportModal"
 
 // Social media icons mapping
 const socialIcons = {
@@ -117,6 +118,7 @@ export default function UserIdentityPanel({
 }: UserIdentityPanelProps) {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
 
   const badgeType = getUserBadgeType(userData.name)
   const isVerified = shouldShowVerifiedTick(userData.name)
@@ -160,7 +162,7 @@ export default function UserIdentityPanel({
             >
               <DropdownMenuItem onClick={() => setShareModalOpen(true)}>Share Profile</DropdownMenuItem>
               {!isOwnProfile && (
-                <DropdownMenuItem className="text-red-600 dark:text-red-400">Report Profile</DropdownMenuItem>
+                <DropdownMenuItem className="text-red-600 dark:text-red-400" onClick={() => setReportModalOpen(true)}>Report Profile</DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -426,6 +428,13 @@ export default function UserIdentityPanel({
         onClose={() => setShareModalOpen(false)}
         url={`https://inkly.app/profile/${userData.id}`}
         title={`Check out ${displayName}'s profile on Inkly`}
+      />
+
+      <ReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        inkId={userData.id}
+        content={userData.name}
       />
     </div>
   )
