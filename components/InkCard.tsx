@@ -1,357 +1,453 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, Bookmark, Share2, MoreHorizontal, Eye, Pin } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import React from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { formatTimeAgo } from "@/utils/formatTimeAgo"
-import { formatCount } from "@/utils/formatCount"
+import { Button } from "@/components/ui/button"
+import { Clock, Eye, Bookmark } from "lucide-react"
+import ReactionButton from "@/components/reaction-button"
 import { truncate } from "@/utils/truncate"
-import { detectInkType } from "@/utils/detectInkType"
+import { formatCount } from "@/utils/formatCount"
+import BookmarkToast from "../components/BookmarkToast"
+import FollowToast from "../components/FollowToast"
+import FollowButton from "./FollowButton"
 import MoreOptionsDropdown from "./MoreOptionsDropdown"
-import ShareModal from "./ShareModal"
+import ReportModal from "./ReportModal"
 import ReflectModal from "./ReflectModal"
-import { useSoundEffects } from "@/hooks/useSoundEffects"
+import EchoPile from "./EchoPile"
+import EchoBurst from "@/components/EchoBurst"
+import { motion } from "framer-motion"
+import { VerifiedTick, getUserBadgeType, shouldShowVerifiedTick, getDisplayName } from "./ui/user-badges"
+import { AvatarBadge } from "./ui/user-badges"
+import { useSoundEffects } from "../hooks/use-sound-effects"
 import Link from "next/link"
+import FloatingToast from "../components/FloatingToast"
+import CollectionPickerModal from "./collections/CollectionPickerModal"
 
 interface InkCardProps {
   id: number
-  inkId: string
   content: string
   author: string
-  avatar?: string
-  avatarColor?: string
-  readingTime: { minutes: number; seconds: number; text: string }
-  views: number
-  reactionCount: number
-  reflectionCount: number
+  avatarColor: string
+  isLong?: boolean
+  reaction?: { reaction: string; count: number }
   bookmarkCount: number
-  echoCount: number
-  createdAt: string
-  shareUrl: string
+  baseEchoCount: number
   onClick: () => void
   onHover: () => void
+  onReact?: (reactionId: string | null) => void
   onBookmark: () => void
   onShare: () => void
   onFollow: () => void
-  isOwnInk?: boolean
-  onPinInk?: (inkId: number) => void
-  isPinned?: boolean
+  views: number
+  reactionCount: number
+  reflectionCount: number
+  readingTime: { text: string; minutes: number }
+  shareCount?: number
+  shareUrl: string
+  animateBookmark: boolean
+  setAnimateBookmark: (value: boolean) => void
+  bookmarked: boolean
+  bookmarkLocked: boolean
+  setBookmarkLocked: (value: boolean) => void
+  bookmarkMessage: string | null
+  setBookmarkMessage: (value: string | null) => void
+  isFollowing: boolean
+  setIsFollowing: (value: boolean) => void
+  isFollowLoading: boolean
+  setIsFollowLoading: (value: boolean) => void
+  isFollowIntent: "follow" | "unfollow" | null
+  setIsFollowIntent: (value: "follow" | "unfollow" | null) => void
+  reportOpen: boolean
+  setReportOpen: (value: boolean) => void
+  reflectOpen: boolean
+  setReflectOpen: (value: boolean) => void
+  localReaction: { reaction: string | null }
+  setLocalReaction: (value: { reaction: string | null }) => void
+  reactionCountLocal: number
+  setReactionCountLocal: (value: number) => void
+  reflectionCountLocal: number
+  setReflectionCountLocal: (value: number) => void
+  bookmarkCountLocal: number
+  setBookmarkCountLocal: (value: number) => void
+  showEchoAnim: boolean
+  setShowEchoAnim: (value: boolean) => void
+  hasReflected: boolean
+  setHasReflected: (value: boolean) => void
+  hasInkified: boolean
+  setHasInkified: (value: boolean) => void
+  echoCount: number
+  setEchoCount: (value: number) => void
+  followMessage: string | null
+  setFollowMessage: (value: string | null) => void
+  echoUsers: { name: string; avatar: string }[]
+  handleReaction: (reactionId: string | null) => void
+  handleBookmark: (e: React.MouseEvent) => void
+  handleFollowClick: (e: React.MouseEvent) => void
+  inkId?: string
+  small?: boolean
+  collectionPickerOpen: boolean
+  setCollectionPickerOpen: (value: boolean) => void
+  handleSaveToCollections: (collectionIds: string[]) => void
 }
 
-export default function InkCard({
-  id,
-  inkId,
-  content,
-  author,
-  avatar,
-  avatarColor = "from-purple-500 to-pink-500",
-  readingTime,
-  views,
-  reactionCount,
-  reflectionCount,
-  bookmarkCount,
-  echoCount,
-  createdAt,
-  shareUrl,
-  onClick,
-  onHover,
-  onBookmark,
-  onShare,
-  onFollow,
-  isOwnInk = false,
-  onPinInk,
-  isPinned = false,
-}: InkCardProps) {
-  const [isLiked, setIsLiked] = useState(false)
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [isEchoed, setIsEchoed] = useState(false)
-  const [showShareModal, setShowShareModal] = useState(false)
-  const [showReflectModal, setShowReflectModal] = useState(false)
-  const [showMoreOptions, setShowMoreOptions] = useState(false)
-  const [localReactionCount, setLocalReactionCount] = useState(reactionCount)
-  const [localReflectionCount, setLocalReflectionCount] = useState(reflectionCount)
-  const [localBookmarkCount, setLocalBookmarkCount] = useState(bookmarkCount)
-  const [localEchoCount, setLocalEchoCount] = useState(echoCount)
-  const [isHovered, setIsHovered] = useState(false)
+// Removed getTagsAndMood function
 
-  const cardRef = useRef<HTMLDivElement>(null)
+const InkCardComponent = (props: InkCardProps) => {
+  const {
+    id,
+    content,
+    author,
+    avatarColor,
+    isLong,
+    reaction,
+    readingTime,
+    onClick,
+    onHover,
+    onReact,
+    onBookmark,
+    onShare,
+    onFollow,
+    views,
+    reactionCount,
+    reflectionCount,
+    bookmarkCount,
+    shareCount = 0,
+    animateBookmark,
+    setAnimateBookmark,
+    bookmarked,
+    bookmarkLocked,
+    setBookmarkLocked,
+    bookmarkMessage,
+    setBookmarkMessage,
+    isFollowing,
+    setIsFollowing,
+    isFollowLoading,
+    setIsFollowLoading,
+    isFollowIntent,
+    setIsFollowIntent,
+    reportOpen,
+    setReportOpen,
+    reflectOpen,
+    setReflectOpen,
+    localReaction,
+    setLocalReaction,
+    reactionCountLocal,
+    setReactionCountLocal,
+    reflectionCountLocal,
+    setReflectionCountLocal,
+    bookmarkCountLocal,
+    setBookmarkCountLocal,
+    showEchoAnim,
+    setShowEchoAnim,
+    hasReflected,
+    setHasReflected,
+    hasInkified,
+    setHasInkified,
+    echoCount,
+    setEchoCount,
+    followMessage,
+    setFollowMessage,
+    echoUsers,
+    handleReaction,
+    handleBookmark: handleBookmarkProp,
+    handleFollowClick,
+    inkId,
+    small = false,
+    collectionPickerOpen,
+    setCollectionPickerOpen,
+    handleSaveToCollections,
+    ...rest
+  } = props
+
+  const hasReacted = localReaction.reaction !== null
+  const shareUrl = `https://inkly.app/?share=${id}`
+
+  const handleReportClick = useCallback(() => setReportOpen(true), [setReportOpen])
+
+  const [expanded, setExpanded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
   const { playSound } = useSoundEffects()
 
-  const inkType = detectInkType(content)
-  const displayContent = truncate(content, 280)
-  const timeAgo = formatTimeAgo(createdAt)
+  // Determine truncation length
+  const TRUNCATE_LENGTH = isLong ? 280 : 120
+  const isTruncatable = content.length > TRUNCATE_LENGTH
 
-  // Get username without @ symbol for URL
-  const username = author.startsWith("@") ? author.slice(1) : author
+  const [undoInkifyMsg, setUndoInkifyMsg] = useState<string | null>(null)
 
-  const handleLike = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsLiked(!isLiked)
-    setLocalReactionCount((prev) => (isLiked ? prev - 1 : prev + 1))
-    playSound("success")
-  }
-
-  const handleBookmark = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsBookmarked(!isBookmarked)
-    setLocalBookmarkCount((prev) => (isBookmarked ? prev - 1 : prev + 1))
-    onBookmark()
-    playSound("bookmark")
-  }
-
-  const handleEcho = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsEchoed(!isEchoed)
-    setLocalEchoCount((prev) => (isEchoed ? prev - 1 : prev + 1))
-    playSound("notification")
-  }
-
-  const handleReflect = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowReflectModal(true)
-  }
-
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowShareModal(true)
-    onShare()
-  }
-
-  const handleMoreOptions = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowMoreOptions(!showMoreOptions)
-  }
-
-  const handlePin = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (onPinInk) {
-      onPinInk(id)
+  useEffect(() => {
+    if (followMessage) {
+      const timeout = setTimeout(() => setFollowMessage(null), 2500)
+      return () => clearTimeout(timeout)
     }
+  }, [followMessage])
+
+  useEffect(() => {
+    if (showEchoAnim) {
+      const timeout = setTimeout(() => setShowEchoAnim(false), 600)
+      return () => clearTimeout(timeout)
+    }
+  }, [showEchoAnim, setShowEchoAnim])
+
+  useEffect(() => {
+    const checkScreen = () => setIsMobile(window.innerWidth < 768)
+    checkScreen()
+    window.addEventListener("resize", checkScreen)
+    return () => window.removeEventListener("resize", checkScreen)
+  }, [])
+
+  // Handle bookmark button click
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    // Right click or Ctrl+click opens collection picker
+    if (e.button === 2 || e.ctrlKey || e.metaKey) {
+      playSound("modalOpen")
+      setCollectionPickerOpen(true)
+      return
+    }
+
+    // Regular click does quick bookmark
+    handleBookmarkProp(e)
   }
 
-  const handleReflectionSubmit = (reflection: string) => {
-    setLocalReflectionCount((prev) => prev + 1)
-    setShowReflectModal(false)
-    playSound("reflection")
+  // Handle bookmark button context menu (right click)
+  const handleBookmarkContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    playSound("modalOpen")
+    setCollectionPickerOpen(true)
   }
 
-  const handleCardClick = () => {
-    onClick()
-  }
-
-  const handleMouseEnter = () => {
-    setIsHovered(true)
-    onHover()
-  }
-
-  const handleMouseLeave = () => {
-    setIsHovered(false)
-  }
+  // Handler to go to public profile
+  const handleViewProfile = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    window.location.href = `/${encodeURIComponent(author)}`;
+  };
 
   return (
     <>
-      <motion.div
-        ref={cardRef}
-        className={`group relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-gray-800 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden ${
-          isHovered ? "scale-[1.02] shadow-2xl" : ""
-        }`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -2 }}
-        onClick={handleCardClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+      <div
+        className={`w-full bg-card rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-border${small ? " text-xs" : ""}`}
+        onClick={onClick}
       >
-        {isPinned && (
-          <div className="absolute top-3 right-3 z-10">
-            <div className="bg-purple-500 text-white p-1.5 rounded-full shadow-lg">
-              <Pin className="w-3 h-3" />
-            </div>
-          </div>
-        )}
-
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/${encodeURIComponent(username)}`}
-                onClick={(e) => e.stopPropagation()}
-                className="hover:scale-105 transition-transform duration-200"
+        <div className={`flex items-center justify-between mb-3${small ? " text-xs" : ""}`}>
+          <div className="flex items-center gap-2">
+            <Link href={`/${encodeURIComponent(author)}`} passHref legacyBehavior>
+              <div
+                className={`relative cursor-pointer ${getUserBadgeType(author) ? "p-0.5 rounded-full" : ""} ${
+                  getUserBadgeType(author) === "creator"
+                    ? "bg-gradient-to-r from-purple-400 to-pink-400"
+                    : getUserBadgeType(author) === "admin"
+                      ? "bg-gradient-to-r from-red-400 to-pink-400"
+                      : getUserBadgeType(author) === "moderator"
+                        ? "bg-gradient-to-r from-blue-400 to-cyan-400"
+                        : getUserBadgeType(author) === "contributor"
+                          ? "bg-gradient-to-r from-green-400 to-emerald-400"
+                          : getUserBadgeType(author) === "writer"
+                            ? "bg-gradient-to-r from-orange-400 to-amber-400"
+                            : getUserBadgeType(author) === "author"
+                              ? "bg-gradient-to-r from-indigo-400 to-purple-400"
+                              : ""
+                }`}
+                onClick={e => e.stopPropagation()}
               >
-                <Avatar className="w-10 h-10 ring-2 ring-white/50 dark:ring-gray-700/50">
-                  {avatar ? (
-                    <img src={avatar || "/placeholder.svg"} alt={author} className="w-full h-full object-cover" />
-                  ) : (
-                    <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white font-semibold`}>
-                      {author.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  )}
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className={`bg-gradient-to-br ${avatarColor} text-white text-base font-medium`}>
+                    {getDisplayName(author)
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
                 </Avatar>
-              </Link>
-              <div>
-                <Link
-                  href={`/${encodeURIComponent(username)}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
-                >
-                  {author}
-                </Link>
-                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span>{timeAgo}</span>
-                  <span>•</span>
-                  <span>{readingTime.text}</span>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    <span>{formatCount(views)}</span>
-                  </div>
-                </div>
+                {getUserBadgeType(author) && <AvatarBadge type={getUserBadgeType(author)!} />}
               </div>
-            </div>
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMoreOptions}
-                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-              <AnimatePresence>
-                {showMoreOptions && (
-                  <MoreOptionsDropdown
-                    onClose={() => setShowMoreOptions(false)}
-                    isOwnInk={isOwnInk}
-                    onPin={handlePin}
-                    isPinned={isPinned}
-                    onFollow={onFollow}
-                    inkId={inkId}
-                    author={author}
-                  />
-                )}
-              </AnimatePresence>
-            </div>
+            </Link>
+            <Link href={`/${encodeURIComponent(author)}`} passHref legacyBehavior>
+              <div className="flex flex-col -space-y-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1">
+                  {getDisplayName(author)}
+                  {/* Only show verified tick for contributors (not special users) */}
+                  {!getUserBadgeType(author) && shouldShowVerifiedTick(author) && <VerifiedTick />}
+                </span>
+                <span className="text-xs text-muted-foreground">2h ago</span>
+              </div>
+            </Link>
           </div>
-
-          {/* Content */}
-          <div className="mb-4">
-            <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{displayContent}</p>
-            {content.length > 280 && (
-              <button className="text-purple-600 dark:text-purple-400 text-sm font-medium mt-2 hover:underline">
-                Read more
-              </button>
-            )}
+          <div className="flex items-center gap-0">
+            <FollowButton
+              onFollow={handleFollowClick}
+              isFollowing={isFollowing}
+              isLoading={isFollowLoading}
+              followIntent={isFollowIntent}
+            />
+            <MoreOptionsDropdown url={shareUrl} onShared={onShare} onReportClick={handleReportClick} />
           </div>
+        </div>
 
-          {/* Ink Type Badge */}
-          {inkType !== "general" && (
-            <div className="mb-4">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  inkType === "question"
-                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                    : inkType === "confession"
-                      ? "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300"
-                      : inkType === "fact"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                }`}
-              >
-                {inkType.charAt(0).toUpperCase() + inkType.slice(1)}
-              </span>
+        <div
+          className={`mb-4 ${small ? "text-xs" : "text-base sm:text-[16px] md:text-[17px] lg:text-[18px]"} font-semibold text-foreground leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-2 sm:py-2`}
+        >
+          <Link href={`/ink/${inkId ?? id}`} passHref legacyBehavior>
+            <a style={{ color: "inherit", textDecoration: "none" }} onClick={(e) => e.stopPropagation()}>
+              {expanded || !isTruncatable ? (
+                <>
+                  {content}
+                  {isTruncatable && expanded && (
+                    <button
+                      className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpanded(false)
+                      }}
+                    >
+                      Read less
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {truncate(content, TRUNCATE_LENGTH)}
+                  <button
+                    className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded(true)
+                    }}
+                  >
+                    Read more
+                  </button>
+                </>
+              )}
+            </a>
+          </Link>
+        </div>
+
+        <div
+          className={`flex justify-between items-center ${small ? "text-[11px]" : "text-xs"} text-muted-foreground pt-2 border-t border-border`}
+        >
+          <div className="flex items-center gap-3">
+            <ReactionButton
+              onReaction={handleReaction}
+              selectedReaction={localReaction.reaction}
+              onSoundPlay={onHover}
+              size="sm"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                setReflectOpen(true)
+              }}
+              onMouseEnter={onHover}
+              className="relative text-muted-foreground hover:text-blue-600 w-8 h-8"
+              disabled={hasReflected && hasInkified}
+              title="Add reflection or repost"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317"
+                />
+              </svg>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBookmarkClick}
+              onContextMenu={handleBookmarkContextMenu}
+              onMouseEnter={onHover}
+              className={`relative w-8 h-8 transition-all ${
+                bookmarked ? "text-purple-600 hover:text-purple-700" : "text-muted-foreground hover:text-purple-600"
+              } ${bookmarkLocked ? "opacity-50" : ""}`}
+              disabled={bookmarkLocked}
+              title={
+                bookmarked
+                  ? "Remove from bookmarks (Right-click for collections)"
+                  : "Save to bookmarks (Right-click for collections)"
+              }
+            >
+              <motion.div animate={animateBookmark ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.3 }}>
+                <Bookmark className={`w-4 h-4 ${bookmarked ? "fill-current" : ""}`} />
+              </motion.div>
+              {bookmarkCountLocal > 0 && (
+                <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {bookmarkCountLocal > 99 ? "99+" : bookmarkCountLocal}
+                </span>
+              )}
+            </Button>
+          </div>
+          <div
+            className={`flex items-center gap-3 ${small ? "text-[11px]" : "text-xs sm:text-sm"} text-muted-foreground`}
+          >
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{readingTime.text}</span>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLike}
-                className={`flex items-center gap-2 transition-all duration-200 ${
-                  isLiked
-                    ? "text-red-500 hover:text-red-600"
-                    : "text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
-                <span className="text-sm">{formatCount(localReactionCount)}</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReflect}
-                className="flex items-center gap-2 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="text-sm">{formatCount(localReflectionCount)}</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleEcho}
-                className={`flex items-center gap-2 transition-all duration-200 ${
-                  isEchoed
-                    ? "text-green-500 hover:text-green-600"
-                    : "text-gray-500 hover:text-green-500 dark:text-gray-400 dark:hover:text-green-400"
-                }`}
-              >
-                <Share2 className={`w-4 h-4 ${isEchoed ? "fill-current" : ""}`} />
-                <span className="text-sm">{formatCount(localEchoCount)}</span>
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBookmark}
-                className={`transition-all duration-200 ${
-                  isBookmarked
-                    ? "text-yellow-500 hover:text-yellow-600"
-                    : "text-gray-500 hover:text-yellow-500 dark:text-gray-400 dark:hover:text-yellow-400"
-                }`}
-              >
-                <Bookmark className={`w-4 h-4 ${isBookmarked ? "fill-current" : ""}`} />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="text-gray-500 hover:text-purple-500 dark:text-gray-400 dark:hover:text-purple-400 transition-colors duration-200"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              <span>{formatCount(views)}</span>
             </div>
           </div>
         </div>
-      </motion.div>
 
-      <ShareModal
-        open={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        url={shareUrl}
-      />
+        {echoCount > 0 && (
+          <div className="relative flex items-center gap-2 text-xs text-muted-foreground pt-1 pl-1">
+            <motion.div
+              className="flex"
+              key={echoCount}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
+              <EchoPile users={echoUsers} total={echoCount} />
+            </motion.div>
+            <EchoBurst show={showEchoAnim} />
+          </div>
+        )}
+      </div>
 
       <ReflectModal
-        open={showReflectModal}
-        onClose={() => setShowReflectModal(false)}
-        onSubmit={handleReflectionSubmit}
-        onRepost={() => {}}
-        onUndoRepost={() => {}}
-        originalInk={{ content, author, timestamp: createdAt }}
-        hasReflected={false}
-        hasInkified={false}
+        open={reflectOpen}
+        onClose={() => setReflectOpen(false)}
+        onRepost={() => {
+          playSound("modalOpen")
+          setHasInkified(true)
+          setReflectOpen(false)
+        }}
+        onUndoRepost={() => {
+          setHasInkified(false)
+          setUndoInkifyMsg("Inkify undone. You can repost if you wish.")
+          setReflectOpen(false)
+        }}
+        onSubmit={(text) => {
+          setReflectionCountLocal(reflectionCountLocal + 1)
+          setHasReflected(true)
+          console.log("Reflection text:", text)
+        }}
+        originalInk={{ content, author, timestamp: "2h ago" }}
+        hasReflected={hasReflected}
+        hasInkified={hasInkified}
+      />
+
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} inkId={id.toString()} content={content} />
+      {bookmarkMessage && <BookmarkToast message={bookmarkMessage} />}
+      {followMessage && <FollowToast key={followMessage} message={followMessage} />}
+      {undoInkifyMsg && <FloatingToast key={undoInkifyMsg} message={undoInkifyMsg} />}
+
+      <CollectionPickerModal
+        isOpen={collectionPickerOpen}
+        onClose={() => setCollectionPickerOpen(false)}
+        inkId={id}
+        inkTitle={content}
+        isMobile={isMobile}
       />
     </>
   )
 }
+
+export default React.memo(InkCardComponent)

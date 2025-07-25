@@ -17,7 +17,6 @@ type SampleInkCard = {
   hasInkified: boolean;
   reactionCount: number;
   reflectionCount: number;
-  shareCount: number;
   shareUrl: string;
   onClick: () => void;
   onHover: () => void;
@@ -53,7 +52,6 @@ function generateSampleInks(count: number, offset = 0): SampleInkCard[] {
     hasInkified: false,
     reactionCount: 0,
     reflectionCount: 0,
-    shareCount: 0,
     shareUrl: "#",
     onClick: () => {},
     onHover: () => {},

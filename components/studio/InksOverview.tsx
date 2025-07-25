@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   Grid3X3,
   List,
@@ -19,284 +18,573 @@ import {
   TrendingDown,
   Minus,
   MoreHorizontal,
-  Calendar,
-  Clock,
+  Share2,
 } from "lucide-react"
 import { formatTimeAgo } from "@/utils/formatTimeAgo"
 import { formatCount } from "@/utils/formatCount"
+import { truncate } from "@/utils/truncate"
+import { ModalSystem, useModalSystem } from "./modals/ModalSystem"
+import { useToast } from "@/hooks/use-toast"
 
 export default function InksOverview() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list")
+  const { isOpen, modalData, openModal, closeModal } = useModalSystem()
+  const { toast } = useToast()
 
   // Mock data for inks
-  const inks = [
+  const [inks, setInks] = useState([
     {
       id: "1",
-      title: "The Art of Mindful Writing",
       content:
-        "In a world filled with distractions, finding moments of clarity through writing has become more important than ever...",
+        "In a world filled with distractions, finding moments of clarity through writing has become more important than ever. This practice has transformed how I approach creativity and self-expression, leading to deeper insights and more meaningful connections with readers.",
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       views: 1247,
       reactions: 89,
       bookmarks: 34,
       reflections: 12,
-      tags: ["mindfulness", "writing", "creativity"],
       isPinned: true,
       trend: "up" as const,
-      readingTime: "3 min read",
+      readingTime: { minutes: 3, seconds: 0, text: "3 min read" },
+      wordCount: 847,
     },
     {
       id: "2",
-      title: "Building Better Habits",
       content:
-        "Small changes compound over time. Here's how I transformed my daily routine and why consistency matters more than perfection...",
+        "Small changes compound over time. Here's how I transformed my daily routine and why consistency matters more than perfection. The journey wasn't easy, but the results speak for themselves.",
       createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       views: 892,
       reactions: 67,
       bookmarks: 28,
       reflections: 8,
-      tags: ["habits", "productivity", "self-improvement"],
       isPinned: false,
       trend: "stable" as const,
-      readingTime: "5 min read",
+      readingTime: { minutes: 5, seconds: 0, text: "5 min read" },
+      wordCount: 623,
     },
     {
       id: "3",
-      title: "The Power of Vulnerability",
       content:
-        "Sharing our struggles isn't weakness—it's courage. This post explores how vulnerability creates deeper connections...",
+        "Sharing our struggles isn't weakness—it's courage. This post explores how vulnerability creates deeper connections and why authenticity matters more than perfection in our digital age.",
       createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       views: 2156,
       reactions: 143,
       bookmarks: 67,
       reflections: 23,
-      tags: ["vulnerability", "relationships", "growth"],
       isPinned: false,
       trend: "up" as const,
-      readingTime: "4 min read",
+      readingTime: { minutes: 4, seconds: 0, text: "4 min read" },
+      wordCount: 1205,
     },
     {
       id: "4",
-      title: "Digital Minimalism Journey",
       content:
-        "After 30 days of digital detox, here's what I learned about our relationship with technology and social media...",
+        "After 30 days of digital detox, here's what I learned about our relationship with technology and social media. The insights were surprising and life-changing.",
       createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       views: 567,
       reactions: 34,
       bookmarks: 15,
       reflections: 6,
-      tags: ["minimalism", "technology", "wellness"],
       isPinned: false,
       trend: "down" as const,
-      readingTime: "6 min read",
+      readingTime: { minutes: 6, seconds: 0, text: "6 min read" },
+      wordCount: 456,
     },
-  ]
+    {
+      id: "5",
+      content:
+        "The morning sun painted the sky in shades of amber and rose, reminding me that every day is a new canvas waiting to be filled with possibilities.",
+      createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+      views: 324,
+      reactions: 28,
+      bookmarks: 12,
+      reflections: 4,
+      isPinned: false,
+      trend: "stable" as const,
+      readingTime: { minutes: 1, seconds: 30, text: "1 min read" },
+      wordCount: 234,
+    },
+    {
+      id: "6",
+      content:
+        "Sometimes the best conversations happen in silence. Today I sat with a friend who was going through a difficult time, and I realized that presence is often more powerful than words.",
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      views: 789,
+      reactions: 56,
+      bookmarks: 23,
+      reflections: 9,
+      isPinned: false,
+      trend: "up" as const,
+      readingTime: { minutes: 2, seconds: 15, text: "2 min read" },
+      wordCount: 345,
+    },
+  ])
 
   const getTrendIcon = (trend: "up" | "down" | "stable") => {
     switch (trend) {
       case "up":
-        return <TrendingUp className="w-3 h-3 text-green-500" />
+        return <TrendingUp className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
       case "down":
-        return <TrendingDown className="w-3 h-3 text-red-500" />
+        return <TrendingDown className="w-3 h-3 text-red-500 dark:text-red-400" />
       default:
-        return <Minus className="w-3 h-3 text-gray-400" />
+        return <Minus className="w-3 h-3 text-slate-400 dark:text-slate-500" />
     }
   }
 
-  const CompactInkCard = ({ ink }: { ink: (typeof inks)[0] }) => (
-    <Card className="group hover:shadow-md transition-all duration-200 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          {/* Content Section */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 dark:text-white text-sm lg:text-base line-clamp-1">
-                {ink.title}
-              </h3>
-              {ink.isPinned && <Pin className="w-3 h-3 text-purple-500 fill-current flex-shrink-0" />}
-              {getTrendIcon(ink.trend)}
-            </div>
+  const handleDeleteInk = (inkId: string) => {
+    const ink = inks.find((i) => i.id === inkId)
+    if (!ink) return
 
-            <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">{ink.content}</p>
+    openModal({
+      type: "delete-confirmation",
+      title: "Delete Ink",
+      description: "This ink will be permanently deleted and cannot be recovered.",
+      onConfirm: () => {
+        setInks((prev) => prev.filter((i) => i.id !== inkId))
+        toast({
+          title: "Ink deleted",
+          description: "Your ink has been successfully deleted.",
+        })
+      },
+    })
+  }
 
-            <div className="flex flex-wrap gap-1 mb-3">
-              {ink.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                  {tag}
-                </Badge>
-              ))}
-              {ink.tags.length > 2 && (
-                <Badge variant="outline" className="text-xs px-2 py-0.5">
-                  +{ink.tags.length - 2}
-                </Badge>
-              )}
-            </div>
+  const handleEditInk = (inkId: string) => {
+    const ink = inks.find((i) => i.id === inkId)
+    if (!ink) return
 
-            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>{formatTimeAgo(ink.createdAt)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span>{ink.readingTime}</span>
-              </div>
+    openModal({
+      type: "edit-content",
+      title: "Edit Ink",
+      content: ink.content,
+      onSave: (newContent: string) => {
+        setInks((prev) =>
+          prev.map((i) =>
+            i.id === inkId ? { ...i, content: newContent, wordCount: newContent.split(" ").length } : i,
+          ),
+        )
+        toast({
+          title: "Ink updated",
+          description: "Your changes have been saved successfully.",
+        })
+      },
+    })
+  }
+
+  const handlePreviewInk = (inkId: string) => {
+    const ink = inks.find((i) => i.id === inkId)
+    if (!ink) return
+
+    openModal({
+      type: "preview-content",
+      content: ink.content,
+      wordCount: ink.wordCount,
+    })
+  }
+
+  const handlePinInk = (inkId: string) => {
+    const ink = inks.find((i) => i.id === inkId)
+    if (!ink) return
+
+    openModal({
+      type: "pin-confirmation",
+      data: { isPinned: ink.isPinned },
+      onConfirm: () => {
+        setInks((prev) => prev.map((i) => (i.id === inkId ? { ...i, isPinned: !i.isPinned } : i)))
+        toast({
+          title: ink.isPinned ? "Ink unpinned" : "Ink pinned",
+          description: ink.isPinned
+            ? "Your ink has been unpinned from your profile."
+            : "Your ink has been pinned to the top of your profile.",
+        })
+      },
+    })
+  }
+
+  const handleAnalytics = (inkId: string) => {
+    // This would typically navigate to analytics page or open analytics modal
+    toast({
+      title: "Analytics",
+      description: "Opening detailed analytics for this ink...",
+    })
+  }
+
+  const handleShare = (inkId: string) => {
+    // This would typically open share modal or copy link
+    navigator.clipboard.writeText(`https://inkly.com/ink/${inkId}`)
+    toast({
+      title: "Link copied",
+      description: "The ink link has been copied to your clipboard.",
+    })
+  }
+
+  const CompactInkCard = ({ ink }: { ink: (typeof inks)[0] }) => {
+    const [isHovered, setIsHovered] = useState(false)
+    const displayContent = truncate(ink.content, 280)
+    const timeAgo = formatTimeAgo(ink.createdAt)
+
+    return (
+      <motion.div
+        className={`group relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm hover:shadow-lg dark:shadow-slate-900/20 transition-all duration-300 cursor-pointer overflow-hidden ${
+          isHovered ? "scale-[1.005] shadow-xl dark:shadow-slate-900/40" : ""
+        }`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -1 }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={() => handlePreviewInk(ink.id)}
+      >
+        {ink.isPinned && (
+          <div className="absolute top-4 right-4 z-10">
+            <div className="bg-violet-500 dark:bg-violet-600 text-white p-1.5 rounded-full shadow-lg">
+              <Pin className="w-3 h-3" />
             </div>
           </div>
+        )}
 
-          {/* Stats Section */}
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+        <div className="p-5 sm:p-6">
+          {/* Header with meta info */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-medium">{timeAgo}</span>
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+              <span>{ink.readingTime.text}</span>
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+              <div className="flex items-center gap-1.5">
                 <Eye className="w-3 h-3" />
                 <span className="font-medium">{formatCount(ink.views)}</span>
               </div>
-              <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                <Heart className="w-3 h-3" />
-                <span className="font-medium">{formatCount(ink.reactions)}</span>
-              </div>
-              <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                <MessageCircle className="w-3 h-3" />
-                <span className="font-medium">{formatCount(ink.reflections)}</span>
-              </div>
-              <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                <Bookmark className="w-3 h-3" />
-                <span className="font-medium">{formatCount(ink.bookmarks)}</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                <Edit className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                <BarChart3 className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                <MoreHorizontal className="w-3 h-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-
-  const GridInkCard = ({ ink }: { ink: (typeof inks)[0] }) => (
-    <Card className="group hover:shadow-lg transition-all duration-200 border-gray-200/50 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <CardTitle className="text-base lg:text-lg font-semibold line-clamp-1">{ink.title}</CardTitle>
-              {ink.isPinned && <Pin className="w-4 h-4 text-purple-500 fill-current" />}
               {getTrendIcon(ink.trend)}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{ink.content}</p>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Could open a dropdown menu here
+                }}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-1 mt-2">
-          {ink.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      </CardHeader>
+          {/* Content */}
+          <div className="mb-5">
+            <p className="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap text-sm sm:text-base font-normal">
+              {displayContent}
+            </p>
+            {ink.content.length > 280 && (
+              <button className="text-violet-600 dark:text-violet-400 text-sm font-medium mt-3 hover:underline transition-colors">
+                Read more
+              </button>
+            )}
+          </div>
 
-      <CardContent className="pt-0">
-        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-          <span>{formatTimeAgo(ink.createdAt)}</span>
-          <span>{ink.readingTime}</span>
-        </div>
+          {/* Stats and Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-2 text-rose-500 dark:text-rose-400">
+                <Heart className="w-4 h-4" />
+                <span className="text-sm font-medium">{formatCount(ink.reactions)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-blue-500 dark:text-blue-400">
+                <MessageCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">{formatCount(ink.reflections)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-amber-500 dark:text-amber-400">
+                <Bookmark className="w-4 h-4" />
+                <span className="text-sm font-medium">{formatCount(ink.bookmarks)}</span>
+              </div>
+            </div>
 
-        {/* Metrics */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium">{formatCount(ink.views)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-red-600 dark:text-red-400" />
-            <span className="text-sm font-medium">{formatCount(ink.reactions)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium">{formatCount(ink.reflections)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Bookmark className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-            <span className="text-sm font-medium">{formatCount(ink.bookmarks)}</span>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleEditInk(ink.id)
+                }}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleAnalytics(ink.id)
+                }}
+              >
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-500 hover:text-violet-600 dark:text-slate-400 dark:hover:text-violet-400 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleShare(ink.id)
+                }}
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteInk(ink.id)
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
+      </motion.div>
+    )
+  }
 
-        {/* Actions */}
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-            <Edit className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
-          <Button size="sm" variant="outline">
-            <BarChart3 className="w-3 h-3" />
-          </Button>
-          <Button size="sm" variant="outline">
-            <Pin className="w-3 h-3" />
-          </Button>
-          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 bg-transparent">
-            <Trash2 className="w-3 h-3" />
-          </Button>
+  const GridInkCard = ({ ink }: { ink: (typeof inks)[0] }) => {
+    const [isHovered, setIsHovered] = useState(false)
+    const displayContent = truncate(ink.content, 200)
+    const timeAgo = formatTimeAgo(ink.createdAt)
+
+    return (
+      <motion.div
+        className={`group relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm hover:shadow-lg dark:shadow-slate-900/20 transition-all duration-300 cursor-pointer overflow-hidden ${
+          isHovered ? "scale-[1.01] shadow-xl dark:shadow-slate-900/40" : ""
+        }`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -2 }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={() => handlePreviewInk(ink.id)}
+      >
+        {ink.isPinned && (
+          <div className="absolute top-4 right-4 z-10">
+            <div className="bg-violet-500 dark:bg-violet-600 text-white p-1.5 rounded-full shadow-lg">
+              <Pin className="w-3 h-3" />
+            </div>
+          </div>
+        )}
+
+        <div className="p-5 sm:p-6">
+          {/* Header with meta info */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-medium">{timeAgo}</span>
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+              <span>{ink.readingTime.text}</span>
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                <span className="font-medium">{formatCount(ink.views)}</span>
+              </div>
+              {getTrendIcon(ink.trend)}
+            </div>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-slate-100 dark:hover:bg-slate-800 h-8 w-8 p-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Could open a dropdown menu here
+                }}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="mb-5">
+            <p className="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap text-sm font-normal">
+              {displayContent}
+            </p>
+            {ink.content.length > 200 && (
+              <button className="text-violet-600 dark:text-violet-400 text-sm font-medium mt-3 hover:underline transition-colors">
+                Read more
+              </button>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="flex items-center gap-2 text-rose-500 dark:text-rose-400">
+              <Heart className="w-4 h-4" />
+              <span className="text-sm font-medium">{formatCount(ink.reactions)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-blue-500 dark:text-blue-400">
+              <MessageCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">{formatCount(ink.reflections)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-amber-500 dark:text-amber-400">
+              <Bookmark className="w-4 h-4" />
+              <span className="text-sm font-medium">{formatCount(ink.bookmarks)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+              <Share2 className="w-4 h-4" />
+              <span className="text-sm font-medium">Share</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleEditInk(ink.id)
+              }}
+            >
+              <Edit className="w-3 h-3 mr-1.5" />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleAnalytics(ink.id)
+              }}
+            >
+              <BarChart3 className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePinInk(ink.id)
+              }}
+            >
+              <Pin className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDeleteInk(ink.id)
+              }}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
-      </CardContent>
-    </Card>
-  )
+      </motion.div>
+    )
+  }
 
   return (
-    <div className="space-y-4 lg:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Your Inks</h2>
-          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-            {inks.length} published • Track performance and engagement
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <div className="space-y-6 lg:space-y-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Your Inks
+              </h1>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-medium">
+                {inks.length} published • Track performance and engagement
+              </p>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="bg-white dark:bg-gray-800"
-          >
-            <List className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-            className="bg-white dark:bg-gray-800"
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </Button>
+            <div className="flex items-center gap-1 p-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-slate-200/60 dark:border-slate-700/60 shadow-sm">
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className={`h-9 px-4 rounded-lg transition-all duration-200 ${
+                  viewMode === "list"
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700"
+                }`}
+                aria-label="List view"
+              >
+                <List className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">List</span>
+              </Button>
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className={`h-9 px-4 rounded-lg transition-all duration-200 ${
+                  viewMode === "grid"
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700"
+                }`}
+                aria-label="Grid view"
+              >
+                <Grid3X3 className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Grid</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Inks Display */}
+          <div className="relative">
+            {viewMode === "list" ? (
+              <div className="space-y-4 sm:space-y-6">
+                {inks.map((ink, index) => (
+                  <motion.div
+                    key={ink.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <CompactInkCard ink={ink} />
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                {inks.map((ink, index) => (
+                  <motion.div
+                    key={ink.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <GridInkCard ink={ink} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Empty state */}
+          {inks.length === 0 && (
+            <div className="text-center py-12 sm:py-16">
+              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                <Edit className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No inks yet</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">Start writing your first ink to see it here.</p>
+              <Button className="bg-violet-600 hover:bg-violet-700 text-white">Create Your First Ink</Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Inks Display */}
-      {viewMode === "list" ? (
-        <div className="space-y-3">
-          {inks.map((ink) => (
-            <CompactInkCard key={ink.id} ink={ink} />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-          {inks.map((ink) => (
-            <GridInkCard key={ink.id} ink={ink} />
-          ))}
-        </div>
-      )}
+      {/* Modal System */}
+      <ModalSystem isOpen={isOpen} modalData={modalData} onClose={closeModal} />
     </div>
   )
 }

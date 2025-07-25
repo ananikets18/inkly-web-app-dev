@@ -25,7 +25,6 @@ interface ResponsiveInkCardProps {
   hasInkified?: boolean
   reactionCount: number
   reflectionCount: number
-  shareCount?: number
   shareUrl: string
   onClick: () => void
   onHover: () => void

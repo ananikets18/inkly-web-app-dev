@@ -72,55 +72,7 @@ export default function ProgressAchievementsSidebar({
   return (
     <div className="space-y-6">
       {/* Level Progress */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/70 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-800 shadow-xl"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Level Progress</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Keep creating to level up!</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-center">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="inline-flex items-center gap-2 cursor-help">
-                    <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">Level {userData.level}</div>
-                    <Star className="w-5 h-5 text-yellow-500" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {userData.xpToNext - userData.xp} XP needed to reach Level {userData.level + 1}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {userData.xp.toLocaleString()} / {userData.xpToNext.toLocaleString()} XP
-            </p>
-          </div>
-
-          {/* Animated Progress Bar */}
-          <div className="relative w-full max-w-full mx-auto">
-            <Progress value={xpProgress} className="h-3 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
-          </div>
-
-          <div className="text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {(userData.xpToNext - userData.xp).toLocaleString()} XP to next level
-            </p>
-          </div>
-        </div>
-      </motion.div>
+    
 
       {/* Achievements */}
       <motion.div

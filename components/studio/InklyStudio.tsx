@@ -79,22 +79,6 @@ export default function InklyStudio() {
 
   return (
     <div className="flex-1 p-4 lg:p-6 space-y-6 bg-gray-50/50 dark:bg-gray-900/50 min-h-screen">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Inkly Studio</h1>
-          <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400 mt-1">
-            Track your content performance and grow your audience
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="bg-white dark:bg-gray-800">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
-
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
         {quickStats.map((stat, index) => (
@@ -122,23 +106,61 @@ export default function InklyStudio() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <TabsList className="grid w-full sm:w-auto grid-cols-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-            <TabsTrigger value="overview" className="text-sm">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="text-sm">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="drafts" className="text-sm">
-              <Calendar className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Drafts</span>
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-1.5">
+            <TabsList
+              role="tablist"
+              className="flex w-full p-1 
+                        dark:from-purple-800 dark:to-purple-900
+                        border border-gray-200 dark:border-gray-700
+                        rounded overflow-hidden text-sm font-medium"
+            >
+              <TabsTrigger
+                role="tab"
+                aria-selected="true"
+                value="overview"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md
+                          transition-all duration-200
+                          hover:bg-purple-100 dark:hover:bg-purple-800
+                          focus:outline-none 
+                          data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900
+                          data-[state=active]:text-purple-700 dark:text-purple-300"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Overview</span>
+              </TabsTrigger>
 
-        </div>
+              <TabsTrigger
+                role="tab"
+                value="analytics"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md
+                          transition-all duration-200
+                          hover:bg-purple-100 dark:hover:bg-purple-800
+                          focus:outline-none 
+                          data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900
+                          data-[state=active]:text-purple-700 dark:text-purple-300"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Analytics</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                role="tab"
+                value="drafts"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md
+                          transition-all duration-200
+                          hover:bg-purple-100 dark:hover:bg-purple-800
+                          focus:outline-none 
+                          data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900
+                          data-[state=active]:text-purple-700 dark:text-purple-300"
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Drafts</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+
+
 
         <TabsContent value="overview" className="space-y-6">
           <InksOverview />
