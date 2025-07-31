@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect, useCallback } from "react"
+import React, { useMemo, useEffect } from "react"
+import { useState, useCallback } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Clock, Eye, Bookmark } from "lucide-react"
@@ -86,6 +86,7 @@ interface InkCardProps {
   handleFollowClick: (e: React.MouseEvent) => void
   inkId?: string
   small?: boolean
+  hideActionBar?: boolean
   collectionPickerOpen: boolean
   setCollectionPickerOpen: (value: boolean) => void
   handleSaveToCollections: (collectionIds: string[]) => void
@@ -98,8 +99,8 @@ const InkCardComponent = (props: InkCardProps) => {
     id,
     content,
     author,
+    hideActionBar = false,
     avatarColor,
-    isLong,
     reaction,
     readingTime,
     onClick,
@@ -170,11 +171,74 @@ const InkCardComponent = (props: InkCardProps) => {
 
   const { playSound } = useSoundEffects()
 
-  // Determine truncation length
-  const TRUNCATE_LENGTH = isLong ? 280 : 120
-  const isTruncatable = content.length > TRUNCATE_LENGTH
+  // Memoized content truncation to prevent recalculation
+  const isTruncatable = useMemo(() => content.length > 280, [content.length])
+  const TRUNCATE_LENGTH = 280
 
-  const [undoInkifyMsg, setUndoInkifyMsg] = useState<string | null>(null)
+  // Debounced screen size check
+  useEffect(() => {
+    const checkScreen = () => setIsMobile(window.innerWidth < 768)
+    checkScreen()
+    
+    let timeoutId: NodeJS.Timeout
+    const debouncedCheck = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(checkScreen, 100)
+    }
+    
+    window.addEventListener("resize", debouncedCheck)
+    return () => {
+      window.removeEventListener("resize", debouncedCheck)
+      clearTimeout(timeoutId)
+    }
+  }, [])
+
+  // Debounced bookmark animation reset
+  const handleBookmarkClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (bookmarkLocked) return
+
+    const next = !bookmarked
+    setBookmarkLocked(true)
+    setBookmarkCountLocal(next ? bookmarkCountLocal + 1 : Math.max(0, bookmarkCountLocal - 1))
+    if (next) setShowEchoAnim(true)
+    setAnimateBookmark(true)
+    setBookmarkMessage(next ? "Saved to your inspirations ✨" : "Removed from bookmarks 🗂️")
+    handleBookmarkProp(e)
+
+    // Debounced animation reset
+    const timeoutId = setTimeout(() => {
+      setAnimateBookmark(false)
+      setBookmarkLocked(false)
+    }, 800)
+    
+    const messageTimeoutId = setTimeout(() => setBookmarkMessage(null), 1800)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      clearTimeout(messageTimeoutId)
+    }
+  }, [bookmarked, bookmarkLocked, bookmarkCountLocal, setBookmarkLocked, setBookmarkCountLocal, setShowEchoAnim, setAnimateBookmark, setBookmarkMessage, handleBookmarkProp])
+
+  // Handle bookmark button context menu (right click)
+  const handleBookmarkContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    playSound("modalOpen")
+    setCollectionPickerOpen(true)
+  }, [playSound, setCollectionPickerOpen])
+
+  // Handler to go to public profile
+  const handleViewProfile = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    window.location.href = `/${encodeURIComponent(author)}`;
+  }, [author]);
+
+  // Memoized bookmark animation to prevent unnecessary re-renders
+  const bookmarkAnimation = useMemo(() => 
+    animateBookmark ? { scale: [1, 1.2, 1] } : {}, 
+    [animateBookmark]
+  )
 
   useEffect(() => {
     if (followMessage) {
@@ -190,41 +254,14 @@ const InkCardComponent = (props: InkCardProps) => {
     }
   }, [showEchoAnim, setShowEchoAnim])
 
+  const [undoInkifyMsg, setUndoInkifyMsg] = useState<string | null>(null)
+
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 768)
     checkScreen()
     window.addEventListener("resize", checkScreen)
     return () => window.removeEventListener("resize", checkScreen)
   }, [])
-
-  // Handle bookmark button click
-  const handleBookmarkClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-
-    // Right click or Ctrl+click opens collection picker
-    if (e.button === 2 || e.ctrlKey || e.metaKey) {
-      playSound("modalOpen")
-      setCollectionPickerOpen(true)
-      return
-    }
-
-    // Regular click does quick bookmark
-    handleBookmarkProp(e)
-  }
-
-  // Handle bookmark button context menu (right click)
-  const handleBookmarkContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    playSound("modalOpen")
-    setCollectionPickerOpen(true)
-  }
-
-  // Handler to go to public profile
-  const handleViewProfile = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    window.location.href = `/${encodeURIComponent(author)}`;
-  };
 
   return (
     <>
@@ -275,15 +312,17 @@ const InkCardComponent = (props: InkCardProps) => {
               </div>
             </Link>
           </div>
-          <div className="flex items-center gap-0">
-            <FollowButton
-              onFollow={handleFollowClick}
-              isFollowing={isFollowing}
-              isLoading={isFollowLoading}
-              followIntent={isFollowIntent}
-            />
-            <MoreOptionsDropdown url={shareUrl} onShared={onShare} onReportClick={handleReportClick} />
-          </div>
+          {!hideActionBar && (
+            <div className="flex items-center gap-0">
+              <FollowButton
+                onFollow={handleFollowClick}
+                isFollowing={isFollowing}
+                isLoading={isFollowLoading}
+                followIntent={isFollowIntent}
+              />
+              <MoreOptionsDropdown url={shareUrl} onShared={onShare} onReportClick={handleReportClick} />
+            </div>
+          )}
         </div>
 
         <div
@@ -324,76 +363,78 @@ const InkCardComponent = (props: InkCardProps) => {
           </Link>
         </div>
 
-        <div
-          className={`flex justify-between items-center ${small ? "text-[11px]" : "text-xs"} text-muted-foreground pt-2 border-t border-border`}
-        >
-          <div className="flex items-center gap-3">
-            <ReactionButton
-              onReaction={handleReaction}
-              selectedReaction={localReaction.reaction}
-              onSoundPlay={onHover}
-              size="sm"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                setReflectOpen(true)
-              }}
-              onMouseEnter={onHover}
-              className="relative text-muted-foreground hover:text-blue-600 w-8 h-8"
-              disabled={hasReflected && hasInkified}
-              title="Add reflection or repost"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317"
-                />
-              </svg>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBookmarkClick}
-              onContextMenu={handleBookmarkContextMenu}
-              onMouseEnter={onHover}
-              className={`relative w-8 h-8 transition-all ${
-                bookmarked ? "text-purple-600 hover:text-purple-700" : "text-muted-foreground hover:text-purple-600"
-              } ${bookmarkLocked ? "opacity-50" : ""}`}
-              disabled={bookmarkLocked}
-              title={
-                bookmarked
-                  ? "Remove from bookmarks (Right-click for collections)"
-                  : "Save to bookmarks (Right-click for collections)"
-              }
-            >
-              <motion.div animate={animateBookmark ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.3 }}>
-                <Bookmark className={`w-4 h-4 ${bookmarked ? "fill-current" : ""}`} />
-              </motion.div>
-              {bookmarkCountLocal > 0 && (
-                <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {bookmarkCountLocal > 99 ? "99+" : bookmarkCountLocal}
-                </span>
-              )}
-            </Button>
-          </div>
+        {!hideActionBar && (
           <div
-            className={`flex items-center gap-3 ${small ? "text-[11px]" : "text-xs sm:text-sm"} text-muted-foreground`}
+            className={`flex justify-between items-center ${small ? "text-[11px]" : "text-xs"} text-muted-foreground pt-2 border-t border-border`}
           >
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{readingTime.text}</span>
+            <div className="flex items-center gap-3">
+              <ReactionButton
+                onReaction={handleReaction}
+                selectedReaction={localReaction.reaction}
+                onSoundPlay={onHover}
+                size="sm"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setReflectOpen(true)
+                }}
+                onMouseEnter={onHover}
+                className="relative text-muted-foreground hover:text-blue-600 w-8 h-8"
+                disabled={hasReflected && hasInkified}
+                title="Add reflection or repost"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 4v5h.582a10.054 10.054 0 0115.775-1.317M20 20v-5h-.582a10.054 10.054 0 01-15.775 1.317"
+                  />
+                </svg>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBookmarkClick}
+                onContextMenu={handleBookmarkContextMenu}
+                onMouseEnter={onHover}
+                className={`relative w-8 h-8 transition-all ${
+                  bookmarked ? "text-purple-600 hover:text-purple-700" : "text-muted-foreground hover:text-purple-600"
+                } ${bookmarkLocked ? "opacity-50" : ""}`}
+                disabled={bookmarkLocked}
+                title={
+                  bookmarked
+                    ? "Remove from bookmarks (Right-click for collections)"
+                    : "Save to bookmarks (Right-click for collections)"
+                }
+              >
+                <motion.div animate={bookmarkAnimation} transition={{ duration: 0.3 }}>
+                  <Bookmark className={`w-4 h-4 ${bookmarked ? "fill-current" : ""}`} />
+                </motion.div>
+                {bookmarkCountLocal > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {bookmarkCountLocal > 99 ? "99+" : bookmarkCountLocal}
+                  </span>
+                )}
+              </Button>
             </div>
-            <span>•</span>
-            <div className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              <span>{formatCount(views)}</span>
+            <div
+              className={`flex items-center gap-3 ${small ? "text-[11px]" : "text-xs sm:text-sm"} text-muted-foreground`}
+            >
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <span>{readingTime.text}</span>
+              </div>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <Eye className="w-4 h-4" />
+                <span>{formatCount(views)}</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {echoCount > 0 && (
           <div className="relative flex items-center gap-2 text-xs text-muted-foreground pt-1 pl-1">

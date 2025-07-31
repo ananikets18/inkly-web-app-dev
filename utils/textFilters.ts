@@ -11,8 +11,14 @@ function normalizeText(input: string): string {
 
 // 1. Profanity & Obscenity Filter (Enhanced)
 export function containsProfanity(input: string): boolean {
-  const normalizedInput = normalizeText(input)
-  // Check for common leetspeak substitutions (e.g., s-h-1-t, f-u-c-k)
+  // Normalize and split into words
+  const normalizedInput = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "") // Remove non-alphanumeric except spaces
+    .split(/\s+/)
+    .filter(Boolean)
+
+  // Also check leetspeak for each word
   const leetSpeakMap: { [key: string]: string } = {
     a: "4",
     e: "3",
@@ -23,15 +29,35 @@ export function containsProfanity(input: string): boolean {
     l: "1",
     z: "2",
   }
-  let leetNormalizedInput = normalizedInput
-  for (const char in leetSpeakMap) {
-    leetNormalizedInput = leetNormalizedInput.replace(new RegExp(leetSpeakMap[char], "g"), char)
+  function leetNormalize(word: string) {
+    let w = word
+    for (const char in leetSpeakMap) {
+      w = w.replace(new RegExp(leetSpeakMap[char], "g"), char)
+    }
+    return w
   }
 
-  return PROFANITY_LIST.some((word) => {
-    const normalizedWord = normalizeText(word)
-    return normalizedInput.includes(normalizedWord) || leetNormalizedInput.includes(normalizedWord)
+  let matchedWord = null
+  let matchedInputWord = null
+  const result = normalizedInput.some((inputWord) => {
+    const leetWord = leetNormalize(inputWord)
+    return PROFANITY_LIST.some((word) => {
+      const normalizedWord = word.toLowerCase()
+      const match = inputWord === normalizedWord || leetWord === normalizedWord
+      if (match) {
+        matchedWord = word
+        matchedInputWord = inputWord
+      }
+      return match
+    })
   })
+  if (result) {
+    console.debug("[Profanity Debug] Input:", input)
+    console.debug("[Profanity Debug] Normalized Words:", normalizedInput)
+    console.debug("[Profanity Debug] Matched Word:", matchedWord)
+    console.debug("[Profanity Debug] Matched Input Word:", matchedInputWord)
+  }
+  return result
 }
 
 // 2. Hate Speech / Discrimination (Placeholder - requires NLP/backend)

@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String?  @unique
+  name          String?  // NextAuth expects this
+  image         String?  // NextAuth expects this
+  bio           String?
+  location      String?
+  emailVerified DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  loginCount    Int      @default(0)
+  
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      String? // 'username', 'profile', 'privacy', 'community', 'complete'
+  
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  inks         Ink[]
+  followers    Follows[] @relation("UserFollowers")
+  following    Follows[] @relation("UserFollowing")
+  reactions    Reaction[]
+  notifications NotificationSettings?
+  onboardingCommunity OnboardingCommunity?
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Ink {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  readingTime String?
+  views       Int      @default(0)
+  type        String?
+  theme       String?
+  visibility  String   @default("public")
+  isPinned    Boolean  @default(false)
+  
+  // Relations
+  reactions   Reaction[]
+  
+  @@map("inks")
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  inkId     String
+  userId    String
+  type      String // 'like', 'love', 'wow', etc.
+  createdAt DateTime @default(now())
+  
+  ink   Ink   @relation(fields: [inkId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([inkId, userId, type])
+  @@map("reactions")
+}
+
+model Follows {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower  User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@id([followerId, followingId])
+  @@map("follows")
+}
+
+model NotificationSettings {
+  id              String @id @default(cuid())
+  userId          String @unique
+  pushEnabled     Boolean @default(false)
+  newFollower     Boolean @default(true)
+  newReaction     Boolean @default(true)
+  trendingInks    Boolean @default(true)
+  followedUserInks Boolean @default(true)
+  mostReacted     Boolean @default(false)
+  suggestions     Boolean @default(false)
+  editorsPick     Boolean @default(false)
+  permissionStatus String @default("default") // 'default', 'granted', 'denied'
+  lastUpdated     DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_settings")
+}
+
+model OnboardingCommunity {
+  id                    String @id @default(cuid())
+  userId                String @unique
+  followingSuggestions  String[] // Array of user IDs to follow
+  interests             String[] // Array of interests
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("onboarding_community")
+}

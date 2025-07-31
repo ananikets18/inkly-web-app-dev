@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Bell, Sparkles } from "lucide-react"
+import { Bell, Sparkles, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -34,200 +34,11 @@ import Header from "../../components/Header"
 import SideNav from "../../components/SideNav"
 import BottomNav from "../../components/BottomNav"
 import Footer from "@/components/Footer"
+import { NetworkWarning } from "@/components/NetworkWarning"
+// Authentication removed - using mock authentication
 
-type NotificationType =
-  | "reaction"
-  | "follow"
-  | "reflection"
-  | "bookmark"
-  | "share"
-  | "milestone"
-  | "system"
-  | "experimental"
-
-interface BaseNotification {
-  id: string
-  type: NotificationType
-  timestamp: string
-  isRead: boolean
-  isImportant: boolean
-}
-
-interface ClusteredNotification extends BaseNotification {
-  clustered: true
-  title: string
-  count: number
-  preview: string
-  users: Array<{
-    name: string
-    avatar: string
-    username: string
-  }>
-  ink?: {
-    id: string
-    content: string
-    author: string
-  }
-  actions?: Array<{
-    label: string
-    type: "primary" | "secondary"
-    action: () => void
-  }>
-  sentiment?: "positive" | "thoughtful" | "viral"
-  xpGain?: number
-  aiInsight?: string
-}
-
-interface SingleNotification extends BaseNotification {
-  clustered: false
-  title: string
-  message: string
-  user?: {
-    name: string
-    avatar: string
-    username: string
-  }
-  ink?: {
-    id: string
-    content: string
-    author: string
-  }
-  milestone?: {
-    type: "xp" | "badge" | "streak"
-    value: number
-    badge?: string
-  }
-  actions?: Array<{
-    label: string
-    type: "primary" | "secondary"
-    action: () => void
-  }>
-  aiInsight?: string
-  xpGain?: number
-}
-
-type Notification = ClusteredNotification | SingleNotification
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "reaction",
-    clustered: true,
-    title: "❤️ 18 people reacted to your Ink",
-    count: 18,
-    preview: "Stay Soft",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    isRead: false,
-    isImportant: true,
-    sentiment: "positive",
-    xpGain: 36,
-    users: [
-      { name: "Maya Chen", avatar: "https://i.pravatar.cc/150?img=22", username: "@maya_zen" },
-      { name: "Alex Rivera", avatar: "https://i.pravatar.cc/150?img=45", username: "@alex_reflects" },
-      { name: "Sam Wilson", avatar: "https://i.pravatar.cc/150?img=33", username: "@sam_writes" },
-    ],
-    ink: {
-      id: "ink-123",
-      content: "Stay soft in a world that wants to make you hard. Your gentleness is your strength.",
-      author: "You",
-    },
-  },
-  {
-    id: "2",
-    type: "follow",
-    clustered: true,
-    title: "👥 5 new followers",
-    count: 5,
-    preview: "joined your community",
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    isRead: false,
-    isImportant: false,
-    users: [
-      { name: "Rahul Sharma", avatar: "https://i.pravatar.cc/150?img=32", username: "@rahul_writes" },
-      { name: "Emma Davis", avatar: "https://i.pravatar.cc/150?img=28", username: "@emma_poet" },
-    ],
-    actions: [
-      {
-        label: "Thank All",
-        type: "primary",
-        action: () => console.log("Thank all"),
-      },
-    ],
-  },
-  {
-    id: "3",
-    type: "milestone",
-    clustered: false,
-    title: "🔥 3-day reflection streak!",
-    message: "You're building a beautiful habit of daily reflection",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    isRead: false,
-    isImportant: true,
-    milestone: {
-      type: "streak",
-      value: 3,
-    },
-    xpGain: 50,
-  },
-  {
-    id: "4",
-    type: "reflection",
-    clustered: true,
-    title: "💭 12 reflections on your quote",
-    count: 12,
-    preview: "about courage",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    isRead: true,
-    isImportant: false,
-    sentiment: "thoughtful",
-    users: [{ name: "Jordan Kim", avatar: "https://i.pravatar.cc/150?img=41", username: "@jordan_thinks" }],
-    ink: {
-      id: "ink-456",
-      content: "Courage is not the absence of fear, but action in spite of it.",
-      author: "You",
-    },
-    aiInsight: "Your ink sparked deep thoughts 💭",
-  },
-  {
-    id: "5",
-    type: "milestone",
-    clustered: false,
-    title: "🌍 Global reach milestone!",
-    message: "Your quote resonated across 3 countries",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    isRead: true,
-    isImportant: true,
-    milestone: {
-      type: "badge",
-      value: 3,
-      badge: "Global Voice",
-    },
-    aiInsight: "This quote resonated across 3 countries 🌍",
-    xpGain: 100,
-  },
-  {
-    id: "6",
-    type: "experimental",
-    clustered: false,
-    title: "🎯 AI-curated match",
-    message: "You might love this Ink too — based on your writing style",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    isRead: true,
-    isImportant: false,
-    ink: {
-      id: "ink-789",
-      content: "The best time to plant a tree was 20 years ago. The second best time is now.",
-      author: "Ancient Proverb",
-    },
-    actions: [
-      {
-        label: "View Ink",
-        type: "secondary",
-        action: () => console.log("View ink"),
-      },
-    ],
-  },
-]
+// Remove NotificationType, BaseNotification, ClusteredNotification, SingleNotification, Notification, mockNotifications
+// Replace mockNotifications and types with a minimal notification state (empty array for now, to be filled by real data integration)
 
 const getSentimentGradient = (sentiment?: string) => {
   switch (sentiment) {
@@ -242,7 +53,7 @@ const getSentimentGradient = (sentiment?: string) => {
   }
 }
 
-const getNotificationIcon = (type: NotificationType) => {
+const getNotificationIcon = (type: string) => {
   switch (type) {
     case "reaction":
       return Heart
@@ -265,18 +76,18 @@ const getNotificationIcon = (type: NotificationType) => {
   }
 }
 
-const groupNotificationsByTime = (notifications: Notification[]) => {
+const groupNotificationsByTime = (notifications: any[]) => {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
   const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
 
   const groups = {
-    today: [] as Notification[],
-    thisWeek: [] as Notification[],
-    lastMonth: [] as Notification[],
-    milestones: [] as Notification[],
-    older: [] as Notification[],
+    today: [] as any[],
+    thisWeek: [] as any[],
+    lastMonth: [] as any[],
+    milestones: [] as any[],
+    older: [] as any[],
   }
 
   notifications.forEach((notification) => {
@@ -309,6 +120,129 @@ const getRelativeTime = (date: Date) => {
 }
 
 // Hero Section Component
+// Full Page Loader Component for Notifications
+function FullPageLoader() {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950 dark:via-background dark:to-orange-950"
+      >
+        <div className="text-center">
+          {/* Animated Logo/Icon */}
+          <motion.div
+            animate={{ 
+              rotate: 360,
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="mx-auto mb-8 w-20 h-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl"
+          >
+            <Bell className="w-10 h-10 text-white" />
+          </motion.div>
+
+          {/* Loading Text */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-bold text-gray-800 dark:text-white mb-4"
+          >
+            Loading Notifications
+          </motion.h2>
+
+          {/* Loading Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto"
+          >
+            Fetching your latest updates and activities...
+          </motion.p>
+
+          {/* Animated Dots */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex justify-center space-x-2"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ 
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-3 h-3 bg-purple-500 rounded-full"
+              />
+            ))}
+          </motion.div>
+
+          {/* Progress Bar */}
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="mt-8 w-64 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-purple-500 to-orange-500"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+// Error State Component for Notifications
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950 dark:via-background dark:to-red-950">
+      <div className="text-center max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="mx-auto mb-6 w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+        >
+          <Bell className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          Notifications Unavailable
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {error}
+        </p>
+        
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function NotificationsHeroSection() {
   return (
     <section className="relative py-16 px-4 sm:px-6 lg:px-8 overflow-hidden w-full" aria-labelledby="hero-heading">
@@ -370,12 +304,38 @@ function NotificationsHeroSection() {
   )
 }
 
+import AuthGuard from "@/components/AuthGuard"
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  return (
+    <AuthGuard>
+      <NotificationsPageContent />
+    </AuthGuard>
+  )
+}
+
+function NotificationsPageContent() {
+  const [notifications, setNotifications] = useState<any[]>([])
   const [filter, setFilter] = useState<"all" | "important" | "social" | "system">("all")
   const [showFilters, setShowFilters] = useState(false)
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set())
   const [showMilestones, setShowMilestones] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const handleRetry = () => {
+    setError(null)
+    setIsLoading(true)
+    setTimeout(() => setIsLoading(false), 1500)
+  }
   const { playSound } = useSoundEffects()
 
   const filteredNotifications = useMemo(() => {
@@ -417,7 +377,7 @@ export default function NotificationsPage() {
   }
 
   // --- Redesigned Notification Card ---
-  const NotificationCard = ({ notification }: { notification: Notification }) => {
+  const NotificationCard = ({ notification }: { notification: any }) => {
     const Icon = getNotificationIcon(notification.type)
     const isExpanded = expandedClusters.has(notification.id)
     const isUnread = !notification.isRead
@@ -478,7 +438,7 @@ export default function NotificationsPage() {
                 {/* Avatars */}
                 <div className="flex items-center gap-2 mb-1">
                   <div className="flex -space-x-2">
-                    {notification.users.slice(0, 3).map((user, idx) => (
+                    {notification.users.slice(0, 3).map((user: any, idx: number) => (
                       <Avatar key={idx} className="w-6 h-6 border-2 border-white shadow-sm">
                         <AvatarFallback className="text-xs bg-purple-100">{user.name[0]}</AvatarFallback>
                       </Avatar>
@@ -494,7 +454,7 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex gap-1">
                     {notification.actions &&
-                      notification.actions.map((action, idx) => (
+                      notification.actions.map((action: any, idx: number) => (
                         <Button
                           key={idx}
                           size="sm"
@@ -581,7 +541,7 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex gap-1">
                     {notification.actions &&
-                      notification.actions.map((action, idx) => (
+                      notification.actions.map((action: any, idx: number) => (
                         <Button
                           key={idx}
                           size="sm"
@@ -623,7 +583,7 @@ export default function NotificationsPage() {
     icon: Icon,
   }: {
     title: string
-    notifications: Notification[]
+    notifications: any[]
     icon: any
   }) => {
     if (notifications.length === 0) return null
@@ -638,7 +598,7 @@ export default function NotificationsPage() {
         </div>
         <div className="space-y-6 ml-6 border-l-2 border-border pl-2">
           <AnimatePresence mode="popLayout">
-            {notifications.map((notification, idx) => (
+            {notifications.map((notification) => (
               <NotificationCard key={notification.id} notification={notification} />
             ))}
           </AnimatePresence>
@@ -654,6 +614,16 @@ export default function NotificationsPage() {
     xpGained: 320,
   }
 
+  // Show full page loader while data is loading
+  if (isLoading) {
+    return <FullPageLoader />
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return <ErrorState error={error} onRetry={handleRetry} />
+  }
+
   // --- Redesigned Layout ---
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -666,6 +636,9 @@ export default function NotificationsPage() {
 
           {/* Notifications Content */}
           <div className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8 relative">
+            {/* Network Warning */}
+            <NetworkWarning variant="banner" />
+            
             {/* Filters */}
             <div className="mb-4 flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">

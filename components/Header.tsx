@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useRouter, usePathname } from "next/navigation"
-import { Plus, Search, UserPlus, Home, Compass, User, HelpCircle, Info, ArrowLeft, X, Hash } from "lucide-react"
+import { Plus, Search, UserPlus, Home, Compass, User, HelpCircle, Info, ArrowLeft, X, Hash, LogOut, ChevronDown, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +12,15 @@ import Logo from "@/components/logo"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import JoinModal from "./JoinModal"
+import { useToast } from "@/components/ui/use-toast"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/context/AuthContext"
 
 const navItems = [
   { icon: Home, label: "Home" },
@@ -57,6 +65,8 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
   const router = useRouter()
   const pathname = usePathname()
   const { playSound, isMuted, isInitialized, toggleMute } = useSoundEffects()
+  const { user, isAuthenticated, logout, needsOnboarding } = useAuth()
+  const { toast } = useToast()
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<{
@@ -66,7 +76,6 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
   }>({ inks: [], users: [], hashtags: [] })
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchContainerRef = useRef<HTMLDivElement>(null)
-  const [isJoinOpen, setIsJoinOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
 
   // Smart show/hide on scroll (like BottomNav)
@@ -239,6 +248,24 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
         part
       ),
     )
+  }
+
+  // Function to generate initials from full name
+  const getInitials = (fullName: string) => {
+    if (!fullName) return "U"
+    
+    // Split by spaces and take first letter of each part
+    const parts = fullName.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+    }
+    
+    // If single word, take first two letters
+    if (fullName.length >= 2) {
+      return fullName.substring(0, 2).toUpperCase()
+    }
+    
+    return fullName.charAt(0).toUpperCase()
   }
 
   // Only show back button on ink full page
@@ -478,38 +505,116 @@ export default function Header({ leftAction }: { leftAction?: React.ReactNode })
             role="group"
             aria-label="Account actions"
           >
-            <Button
-              className="px-4 py-2 flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-              aria-label="Create Ink"
-              title="Create new ink"
-              onMouseEnter={handleButtonHover}
-              onClick={() => {
-                handleButtonClick("click")
-                router.push("/create")
-              }}
-            >
-              <Plus className="w-4 h-4" aria-hidden="true" />
-              <span className="text-xs md:text-sm lg:text-base font-medium">Create</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="px-4 py-2 text-sm flex items-center gap-2 rounded-full bg-transparent border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
-              aria-label="Join Inkly"
-              title="Join Inkly community"
-              onMouseEnter={handleButtonHover}
-              onClick={() => {
-                handleButtonClick("follow")
-                setIsJoinOpen(true)
-              }}
-            >
-              <UserPlus className="w-4 h-4" aria-hidden="true" />
-              <span className="text-xs md:text-sm lg:text-base font-medium">Join</span>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button
+                  className="px-4 py-2 flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                  aria-label="Create Ink"
+                  title="Create new ink"
+                  onMouseEnter={handleButtonHover}
+                  onClick={() => {
+                    handleButtonClick("click")
+                    router.push("/create")
+                  }}
+                >
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-xs md:text-sm lg:text-base font-medium">Create</span>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="px-4 py-2 text-sm flex items-center gap-2 rounded-full bg-transparent border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                      aria-label="User menu"
+                      title="User menu"
+                      onMouseEnter={handleButtonHover}
+                    >
+                      <Avatar className="w-6 h-6">
+                        <AvatarFallback className="text-xs font-medium">
+                          {getInitials(user?.name || user?.email || "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs md:text-sm lg:text-base font-medium hidden sm:inline">
+                        {user?.name || user?.email || "User"}
+                      </span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleButtonClick("follow")
+                        router.push("/profile")
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      View Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleButtonClick("follow")
+                        router.push("/settings")
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleButtonClick("click")
+                        logout()
+                        toast({
+                          title: "Signed out",
+                          description: "You have been successfully logged out.",
+                        })
+                      }}
+                      className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  className="px-4 py-2 flex items-center gap-2 rounded-full bg-transparent border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                  aria-label="Sign In"
+                  title="Sign In to Inkly"
+                  onMouseEnter={handleButtonHover}
+                  onClick={() => {
+                    handleButtonClick("click")
+                    router.push("/auth/signin")
+                  }}
+                >
+                  <User className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-xs md:text-sm lg:text-base">Sign In</span>
+                </Button>
+                <Button
+                  className="px-4 py-2 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 font-medium"
+                  aria-label="Get Started"
+                  title="Get Started with Inkly"
+                  onMouseEnter={handleButtonHover}
+                  onClick={() => {
+                    handleButtonClick("click")
+                    router.push("/auth/signup")
+                  }}
+                >
+                  <UserPlus className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-xs md:text-sm lg:text-base">Get Started</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      <JoinModal open={isJoinOpen} onOpenChange={setIsJoinOpen} />
+          {/* Authentication modals removed */}
     </>
   )
 }

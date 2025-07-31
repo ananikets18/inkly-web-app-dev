@@ -4,16 +4,17 @@ import { Home, Settings, Compass, User, HelpCircle, Info, Bell, BarChart, PenToo
 import { Button } from "@/components/ui/button"
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
 
 // Main navigation items (top, grouped)
 const navItems = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Compass, label: "Explore", href: "/explore" },
-  { icon: PenTool, label: "Inkly Studio", href: "/studio" },
-  { icon: User, label: "Profile", href: "/profile" },
-  { icon: Bell, label: "Notifications", href: "/notifications" },
-  { icon: BarChart, label: "Analytics", href: "/analytics" },
-  { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: PenTool, label: "Inkly Studio", href: "/studio", requiresAuth: true },
+  { icon: User, label: "Profile", href: "/profile", requiresAuth: true },
+  { icon: Bell, label: "Notifications", href: "/notifications", requiresAuth: true },
+  { icon: BarChart, label: "Analytics", href: "/analytics", requiresAuth: true },
+  { icon: Settings, label: "Settings", href: "/settings", requiresAuth: true },
 ]
 // Support items (bottom)
 const supportItems = [
@@ -24,6 +25,7 @@ const supportItems = [
 export default function SideNav() {
   const router = useRouter()
   const pathname = usePathname()
+  const { isAuthenticated, user } = useAuth()
   const [visible, setVisible] = useState(true)
   const lastScrollY = useRef(0)
 
@@ -61,7 +63,9 @@ export default function SideNav() {
     >
       {/* Main nav group (no extra spacing) */}
       <nav className="flex flex-col items-center py-6 space-y-7" role="navigation" aria-label="Main navigation">
-        {navItems.map(({ icon: Icon, label, href }, i) => (
+        {navItems
+          .filter(item => !item.requiresAuth || isAuthenticated)
+          .map(({ icon: Icon, label, href }, i) => (
           <div key={i} className="relative group last:mb-0">
             <Button
               variant="ghost"

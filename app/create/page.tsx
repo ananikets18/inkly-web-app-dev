@@ -46,6 +46,8 @@ import {
   isOnlyPunctuationOrWhitespace,
 } from "@/utils/textFilters"
 import { validateInkContent, type InkValidationResult } from "@/utils/inkValidation"
+import { NetworkWarning } from "@/components/NetworkWarning"
+// Authentication removed - using mock authentication
 
 // Enhanced background themes with gradients
 const BACKGROUND_THEMES = [
@@ -483,7 +485,17 @@ const calculateReadingTime = (text: string) => {
   }
 }
 
+import AuthGuard from "@/components/AuthGuard"
+
 export default function CreatePage() {
+  return (
+    <AuthGuard>
+      <CreatePageContent />
+    </AuthGuard>
+  )
+}
+
+function CreatePageContent() {
   const router = useRouter()
   const { playSound } = useSoundEffects()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -670,6 +682,9 @@ export default function CreatePage() {
 
       {/* Main Writing Area */}
       <div className="pt-16 pb-24 px-4 h-screen flex flex-col">
+        {/* Network Warning */}
+        <NetworkWarning variant="banner" />
+        
         <div className="flex-1 max-w-4xl mx-auto w-full">
           <Textarea
             ref={textareaRef}

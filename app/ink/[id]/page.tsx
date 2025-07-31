@@ -9,6 +9,7 @@ import FeedLoader from "@/components/FeedLoader";
 import Masonry from "react-masonry-css";
 import ResponsiveInkCard from "@/components/ResponsiveInkCard";
 import MoreToExploreMasonry from "@/components/MoreToExploreMasonry";
+import { NetworkWarning } from "@/components/NetworkWarning";
 
 interface Ink {
   id: string;
@@ -185,16 +186,22 @@ export default function InkPage() {
       <Header />
       <div className="flex">
         <SideNav />
-        <main className="flex-1 px-0 py-0 md:py-6 sm:px-6">
-          <div className="max-w-3xl mx-auto my-5 md:my-10">
+        <main className="flex-1 px-0 py-0 md:py-3 sm:px-3">
+          <div className="max-w-full mx-auto my-2 md:my-0">
+            {/* Network Warning */}
+            <NetworkWarning variant="banner" />
+            
             {/* Back button removed, now handled in Header */}
 
             {/* Content */}
-            <div className="bg-white shadow-sm border border-gray-200 p-3">
-              <InkDetails ink={ink} />
+            <div className="p-3">
+              <InkDetails ink={{
+                ...ink,
+                type: ink.type ?? ""
+              }} />
             </div>
           </div>
-          <MoreToExploreMasonry />
+          {/* <MoreToExploreMasonry /> */}
         </main>
       </div>
     </div>

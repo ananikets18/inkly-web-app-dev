@@ -3,13 +3,12 @@
 import type React from "react"
 
 import { motion } from "framer-motion"
-import { Settings, Sparkles } from "lucide-react"
+import { Settings, Sparkles, AlertCircle, RefreshCw } from "lucide-react"
 import Header from "@/components/Header"
 import BottomNav from "@/components/BottomNav"
 import SideNav from "@/components/SideNav"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import {
-  User,
   Shield,
   Bell,
   Trophy,
@@ -43,25 +42,213 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { AnimatePresence } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import { useTheme } from "next-themes"
-import NotificationSettings from "@/components/NotificationSettings"
-import NotificationService from "@/components/NotificationService"
-import Footer from "@/components/Footer"
+import dynamic from "next/dynamic"
+import { NetworkWarning } from "@/components/NetworkWarning"
+import { useNetworkStatus } from "@/hooks/use-network-status"
+// Authentication removed - using mock authentication
+
+// AuthStatus Component
+function AuthStatus() {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+        <span className="text-xs font-medium text-green-700 dark:text-green-300">Authenticated</span>
+      </div>
+      <span className="text-xs text-muted-foreground">Mock authentication active</span>
+    </div>
+  )
+}
+
+// Lazy load heavy components for better mobile performance
+const NotificationSettings = dynamic(() => import("@/components/NotificationSettings"), {
+  loading: () => <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col min-h-[500px] animate-pulse" />
+})
+
+const NotificationService = dynamic(() => import("@/components/NotificationService"), {
+  ssr: false
+})
+
+const Footer = dynamic(() => import("@/components/Footer"), {
+  loading: () => <div className="h-20 bg-muted animate-pulse" />
+})
+
+// Error Boundary Component
+const ErrorFallback = ({ error, retry }: { error: Error; retry: () => void }) => (
+  <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col items-center justify-center min-h-[400px] text-center" role="alert" aria-live="polite">
+    <AlertCircle className="w-12 h-12 text-red-500 mb-4" aria-hidden="true" />
+    <h2 className="text-xl font-semibold text-foreground mb-2">Something went wrong</h2>
+    <p className="text-muted-foreground mb-4 max-w-md">
+      We encountered an error while loading your settings. Please try again.
+    </p>
+    <div className="flex gap-2">
+      <Button onClick={retry} className="flex items-center gap-2">
+        <RefreshCw className="w-4 h-4" />
+        Try Again
+      </Button>
+      <Button variant="outline" onClick={() => window.location.reload()}>
+        Reload Page
+      </Button>
+    </div>
+  </div>
+)
+
+// Full Page Loader Component for Settings
+function FullPageLoader() {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950 dark:via-background dark:to-orange-950"
+      >
+        <div className="text-center">
+          {/* Animated Logo/Icon */}
+          <motion.div
+            animate={{ 
+              rotate: 360,
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="mx-auto mb-8 w-20 h-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl"
+          >
+            <Settings className="w-10 h-10 text-white" />
+          </motion.div>
+
+          {/* Loading Text */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-bold text-gray-800 dark:text-white mb-4"
+          >
+            Loading Settings
+          </motion.h2>
+
+          {/* Loading Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto"
+          >
+            Preparing your personalized settings and preferences...
+          </motion.p>
+
+          {/* Animated Dots */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex justify-center space-x-2"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ 
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-3 h-3 bg-purple-500 rounded-full"
+              />
+            ))}
+          </motion.div>
+
+          {/* Progress Bar */}
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="mt-8 w-64 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-purple-500 to-orange-500"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+// Error State Component for Settings
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950 dark:via-background dark:to-red-950">
+      <div className="text-center max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="mx-auto mb-6 w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+        >
+          <Settings className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          Settings Unavailable
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {error}
+        </p>
+        
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Retry Hook
+const useRetry = (callback: () => Promise<void>, maxRetries = 3) => {
+  const [retryCount, setRetryCount] = useState(0)
+  const [isRetrying, setIsRetrying] = useState(false)
+
+  const retry = useCallback(async () => {
+    if (retryCount >= maxRetries) return
+    
+    setIsRetrying(true)
+    try {
+      await callback()
+      setRetryCount(0)
+    } catch (error) {
+      setRetryCount(prev => prev + 1)
+    } finally {
+      setIsRetrying(false)
+    }
+  }, [callback, retryCount, maxRetries])
+
+  return { retry, retryCount, isRetrying, canRetry: retryCount < maxRetries }
+}
 
 const navSections = [
-  {
-    icon: User,
-    label: "Profile Settings",
-    desc: "Public profile & avatar",
-    active: true,
-  },
   {
     icon: Shield,
     label: "Account & Privacy",
     desc: "Security & privacy",
+    active: true,
   },
   {
     icon: Bell,
@@ -91,52 +278,65 @@ const navSections = [
   },
 ]
 
-const avatars = [
-  "/placeholder-user.jpg",
-  "/placeholder-user.jpg",
-  "/placeholder-user.jpg",
-  "/placeholder-user.jpg",
-  "/placeholder-user.jpg",
-  "/placeholder-user.jpg",
-]
-
 const sessionIcon = (device: string) => {
   if (device.toLowerCase().includes("iphone")) return <Smartphone className="w-5 h-5" />
   if (device.toLowerCase().includes("ipad")) return <Tablet className="w-5 h-5" />
   return <Monitor className="w-5 h-5" />
 }
 
-// Hero Section Component
+// Hero Section Component - Optimized for mobile performance
 function SettingsHeroSection() {
+  const [isVisible, setIsVisible] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
+
+  // Check for reduced motion preference
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReducedMotion(mediaQuery.matches)
+    
+    const handleChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  // Lazy load animations for mobile
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <section className="relative py-16 px-4 sm:px-6 lg:px-8 overflow-hidden w-full" aria-labelledby="hero-heading">
-      {/* Background gradient */}
+      {/* Background gradient - simplified for mobile */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950/20 dark:via-background dark:to-orange-950/20" />
 
-      {/* Floating particles/ambient elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full opacity-60"
-          animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute top-32 right-16 w-1 h-1 bg-orange-400 rounded-full opacity-40"
-          animate={{ y: [0, -15, 0], opacity: [0.4, 0.8, 0.4] }}
-          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
-        />
-        <motion.div
-          className="absolute bottom-20 left-1/4 w-1.5 h-1.5 bg-teal-400 rounded-full opacity-50"
-          animate={{ y: [0, -10, 0], opacity: [0.5, 0.9, 0.5] }}
-          transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }}
-        />
-      </div>
+      {/* Floating particles - reduced for mobile performance */}
+      {!reducedMotion && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Only show 1 particle on mobile, 3 on desktop */}
+          <motion.div
+            className="absolute top-20 left-10 w-2 h-2 bg-purple-400 rounded-full opacity-60 hidden sm:block"
+            animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-32 right-16 w-1 h-1 bg-orange-400 rounded-full opacity-40 hidden sm:block"
+            animate={{ y: [0, -15, 0], opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
+          />
+          <motion.div
+            className="absolute bottom-20 left-1/4 w-1.5 h-1.5 bg-teal-400 rounded-full opacity-50"
+            animate={{ y: [0, -10, 0], opacity: [0.5, 0.9, 0.5] }}
+            transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }}
+          />
+        </div>
+      )}
 
       <div className="relative max-w-4xl mx-auto text-center">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 30 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: reducedMotion ? 0 : 0.8, ease: "easeOut" }}
         >
           <h1
             id="hero-heading"
@@ -146,17 +346,17 @@ function SettingsHeroSection() {
           </h1>
           <motion.p
             className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: reducedMotion ? 0 : 0.8, delay: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
           >
             Customize your Inkly experience to match your creative style
           </motion.p>
           <motion.div
             className="flex items-center justify-center gap-2 mt-8"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+            initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.9 }}
+            animate={isVisible ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+            transition={{ duration: reducedMotion ? 0 : 0.6, delay: reducedMotion ? 0 : 0.4, ease: "easeOut" }}
           >
             <Settings className="w-5 h-5 text-purple-500" aria-hidden="true" />
             <span className="text-sm text-muted-foreground font-medium">Personalize your creative journey</span>
@@ -168,25 +368,137 @@ function SettingsHeroSection() {
   )
 }
 
+import AuthGuard from "@/components/AuthGuard"
+
 export default function SettingsPage() {
+  return (
+    <AuthGuard>
+      <SettingsPageContent />
+    </AuthGuard>
+  )
+}
+
+function SettingsPageContent() {
   // All hooks go here!
   const { toast } = useToast()
+  
+  // Performance optimization: Memoize expensive operations
+  const [isClient, setIsClient] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  
+  useEffect(() => {
+    setIsClient(true)
+    // Simulate loading
+    const timer = setTimeout(() => setIsLoading(false), 1000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Error handling and retry logic
+  const handleError = useCallback((error: Error, context: string) => {
+    console.error(`Error in ${context}:`, error)
+    setError(error)
+    toast({
+      title: "Something went wrong",
+      description: `Failed to ${context}. Please try again.`,
+      variant: "destructive",
+    })
+  }, [toast])
+
+  const retryOperation = useCallback(() => {
+    setError(null)
+    setIsLoading(true)
+    // Simulate retry
+    setTimeout(() => setIsLoading(false), 1000)
+  }, [])
+
+  // Mock user for demo
+  const user = {
+    id: "demo-user-id",
+    fullName: "Demo User",
+    username: "demo_user",
+    email: "demo@example.com",
+    avatarUrl: undefined,
+    bio: "This is a demo profile for testing purposes.",
+    status: "active" as const,
+    onboarded: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    provider: "demo"
+  }
+  const updateUser = async (userData: any) => {
+    // Mock update function
+    console.log("Mock update user:", userData)
+    return { success: true }
+  }
   const [isEditingEmail, setIsEditingEmail] = useState(false)
-  const [email, setEmail] = useState("john.doe@example.com")
+  const [email, setEmail] = useState(user?.email || "")
   const [emailDraft, setEmailDraft] = useState(email)
+  
+  // Update email when user data changes
+  useEffect(() => {
+    if (user?.email && user.email !== email) {
+      setEmail(user.email)
+      setEmailDraft(user.email)
+    }
+  }, [user?.email, email])
+  
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => setEmailDraft(e.target.value)
   const handleEmailEdit = () => {
     setEmailDraft(email)
     setIsEditingEmail(true)
   }
-  const handleEmailSave = () => {
-    setEmail(emailDraft)
-    setIsEditingEmail(false)
+  const handleEmailSave = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Update user profile with new email
+      const result = await updateUser({ email: emailDraft })
+      
+      if (result.success) {
+        setEmail(emailDraft)
+        setIsEditingEmail(false)
+        toast({
+          title: "Email updated",
+          description: "Your email address has been successfully updated.",
+        })
+      } else {
+        toast({
+          title: "Update failed",
+          description: result.error || "Failed to update email address.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      handleError(error as Error, "update email")
+    } finally {
+      setIsLoading(false)
+    }
   }
   const handleEmailCancel = () => {
     setEmailDraft(email)
     setIsEditingEmail(false)
   }
+
+  // Add keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEditingEmail) {
+        handleEmailCancel()
+      }
+    }
+    
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isEditingEmail, handleEmailCancel])
+
+  // Add focus management for accessibility
+  useEffect(() => {
+    if (isEditingEmail && emailInputRef.current) {
+      emailInputRef.current.focus()
+    }
+  }, [isEditingEmail])
 
   // Add notification toggles at the top level
   const [notifPushFollower, setNotifPushFollower] = useState(false)
@@ -208,33 +520,11 @@ export default function SettingsPage() {
     "📚 Life Lessons",
     "🧠 Deep Thoughts",
     "🎨 Creativity",
-    "🌱 Personal Growth",
   ])
-  const [suggestedTopics, setSuggestedTopics] = useState([
-    "Mindfulness",
-    "Daily Thoughts",
-    "Self Reflection",
-    "Wisdom",
-    "Poetry",
-    "Mental Health",
-  ])
-  const [customTopic, setCustomTopic] = useState("")
   const [showNewTopics, setShowNewTopics] = useState(false)
   const [topicRecommendations, setTopicRecommendations] = useState(false)
 
   const handleRemoveTopic = (topic: string) => setUserTopics(userTopics.filter((t) => t !== topic))
-  const handleAddSuggestedTopic = (topic: string) => {
-    if (userTopics.length < 15 && !userTopics.includes(topic)) {
-      setUserTopics([...userTopics, topic])
-      setSuggestedTopics(suggestedTopics.filter((t) => t !== topic))
-    }
-  }
-  const handleAddCustomTopic = () => {
-    if (customTopic && userTopics.length < 15 && !userTopics.includes(customTopic)) {
-      setUserTopics([...userTopics, customTopic])
-      setCustomTopic("")
-    }
-  }
 
   // Add security state at the top level
   const [currentPassword, setCurrentPassword] = useState("")
@@ -250,6 +540,12 @@ export default function SettingsPage() {
 
   // Theme preference state
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Responsive tab state for mobile
   const [activeTab, setActiveTab] = useState(0)
@@ -269,59 +565,63 @@ export default function SettingsPage() {
 
   // Handler for push notification toggle
   const handlePushNotificationToggle = async (checked: boolean) => {
-    setPushNotifications(checked)
-    if (checked) {
-      if (typeof window !== "undefined" && "Notification" in window) {
-        if (Notification.permission === "granted") {
-          toast({
-            title: "Notifications enabled!",
-            description: "You'll now receive important updates from Inkly in your browser.",
-          })
-        } else if (Notification.permission === "denied") {
-          toast({
-            title: "Notifications blocked",
-            description:
-              "You won't receive browser notifications. You can enable them anytime in your browser settings.",
-          })
-          setPushNotifications(false)
-        } else {
-          try {
-            const permission = await Notification.requestPermission()
-            if (permission === "granted") {
-              toast({
-                title: "Notifications enabled!",
-                description: "You'll now receive important updates from Inkly in your browser.",
-              })
-            } else {
-              toast({
-                title: "Notifications blocked",
-                description:
-                  "You won't receive browser notifications. You can enable them anytime in your browser settings.",
-              })
-              setPushNotifications(false)
-            }
-          } catch (e) {
+    try {
+      setIsLoading(true)
+      setPushNotifications(checked)
+      if (checked) {
+        if (typeof window !== "undefined" && "Notification" in window) {
+          if (Notification.permission === "granted") {
             toast({
-              title: "Something went wrong",
-              description: "We couldn't update your notification settings. Please try again.",
+              title: "Notifications enabled!",
+              description: "You'll now receive important updates from Inkly in your browser.",
+            })
+          } else if (Notification.permission === "denied") {
+            toast({
+              title: "Notifications blocked",
+              description:
+                "You won't receive browser notifications. You can enable them anytime in your browser settings.",
             })
             setPushNotifications(false)
+          } else {
+            try {
+              const permission = await Notification.requestPermission()
+              if (permission === "granted") {
+                toast({
+                  title: "Notifications enabled!",
+                  description: "You'll now receive important updates from Inkly in your browser.",
+                })
+              } else {
+                toast({
+                  title: "Notifications blocked",
+                  description:
+                    "You won't receive browser notifications. You can enable them anytime in your browser settings.",
+                })
+                setPushNotifications(false)
+              }
+            } catch (e) {
+              handleError(e as Error, "request notification permission")
+              setPushNotifications(false)
+            }
           }
+        } else {
+          toast({
+            title: "Not supported",
+            description: "Your browser does not support push notifications.",
+          })
+          setPushNotifications(false)
         }
       } else {
+        setNotifPushFollower(false)
+        setNotifPushReaction(false)
         toast({
-          title: "Not supported",
-          description: "Your browser does not support push notifications.",
+          title: "Push notifications disabled",
+          description: "You will no longer receive browser notifications from Inkly.",
         })
-        setPushNotifications(false)
       }
-    } else {
-      setNotifPushFollower(false)
-      setNotifPushReaction(false)
-      toast({
-        title: "Push notifications disabled",
-        description: "You will no longer receive browser notifications from Inkly.",
-      })
+    } catch (error) {
+      handleError(error as Error, "update notification settings")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -343,180 +643,39 @@ export default function SettingsPage() {
   }
 
   const emailInputRef = useRef<HTMLInputElement>(null)
+  const { isOnline } = useNetworkStatus()
 
   // State for generic setting dialog
   const [settingDialogOpen, setSettingDialogOpen] = useState(false)
   const [settingDialogMessage, setSettingDialogMessage] = useState("")
 
   // Generic handler for all non-email toggles
-  const handleSettingToggle = (label: string, checked: boolean, setFn: (v: boolean) => void) => {
-    setFn(checked)
-    // Only show toast for Badges & Achievements toggles
-    if (label === "Show Badges on Profile" || label === "Achievement Notifications") {
-      toast({
-        title: checked ? "Enabled" : "Disabled",
-        description: `${label} ${checked ? "enabled" : "disabled"}.`,
-      })
-    } else {
-      setSettingDialogMessage(checked ? `You've enabled ${label}.` : `You've disabled ${label}.`)
-      setSettingDialogOpen(true)
+  const handleSettingToggle = async (label: string, checked: boolean, setFn: (v: boolean) => void) => {
+    try {
+      setIsLoading(true)
+      setFn(checked)
+      // Only show toast for Badges & Achievements toggles
+      if (label === "Show Badges on Profile" || label === "Achievement Notifications") {
+        toast({
+          title: checked ? "Enabled" : "Disabled",
+          description: `${label} ${checked ? "enabled" : "disabled"}.`,
+        })
+      } else {
+        setSettingDialogMessage(checked ? `You've enabled ${label}.` : `You've disabled ${label}.`)
+        setSettingDialogOpen(true)
+      }
+    } catch (error) {
+      handleError(error as Error, `update ${label.toLowerCase()}`)
+      // Revert the change on error
+      setFn(!checked)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // For demo, only Profile Settings is implemented
-  const renderPanel = () => {
+  const renderPanel = useCallback(() => {
     switch (activeTab) {
-      case 0: // Profile Settings
-        return (
-          <div className="bg-card rounded-3xl border border-border shadow-sm p-8">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h1 className="text-2xl font-extrabold text-foreground mb-1 tracking-tight">Profile Settings</h1>
-                <p className="text-muted-foreground text-sm">Public profile & avatar</p>
-              </div>
-              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-muted text-muted-foreground border border-border">
-                PUBLIC
-              </span>
-            </div>
-            <form className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">Username</label>
-                  <input
-                    type="text"
-                    className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground font-mono font-semibold text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
-                    value="@alexthompson"
-                    readOnly
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Your unique identifier. This appears in your profile URL.
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">Display Name</label>
-                  <input
-                    type="text"
-                    className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground font-semibold text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
-                    value="Alex Thompson"
-                    readOnly
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">This is how your name appears to others.</p>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">Bio</label>
-                <textarea
-                  className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
-                  rows={3}
-                  maxLength={160}
-                  defaultValue="Digital artist and creative writer. Love exploring new ideas through ink and pixels."
-                />
-                <div className="flex justify-end text-xs text-muted-foreground mt-1">86/160</div>
-                <p className="text-xs text-muted-foreground mt-1">A brief description that appears on your profile.</p>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-2">Profile Avatar</label>
-                <div className="flex items-center gap-4 mb-2">
-                  <div className="w-20 h-20 rounded-full border-4 border-purple-200 shadow-sm overflow-hidden flex items-center justify-center bg-card">
-                    <Image src="/placeholder-user.jpg" alt="Current avatar" width={80} height={80} />
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">Current</span>
-                  <span className="ml-4 text-xs text-muted-foreground">Choose from our curated avatar collection</span>
-                </div>
-                <div className="flex gap-4 mt-2">
-                  {avatars.map((src, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className="w-16 h-16 rounded-full border-2 border-border overflow-hidden flex items-center justify-center bg-card hover:border-purple-400 hover:ring-2 hover:ring-purple-100 transition-all shadow-sm"
-                    >
-                      <Image src={src || "/placeholder.svg"} alt="Avatar option" width={64} height={64} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </form>
-            {/* Footer actions */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-10 pt-6 border-t border-border gap-4">
-              <div className="flex items-center gap-3">
-                <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="px-4 py-1.5 rounded-lg border-border text-foreground bg-card font-medium text-xs hover:bg-muted transition"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setShowResetDialog(true)
-                      }}
-                    >
-                      Reset to defaults
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Reset to Defaults?</DialogTitle>
-                      <DialogDescription>
-                        This will revert all settings in this section to their original values. Are you sure?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowResetDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          setShowResetDialog(false) /* handle actual reset */
-                        }}
-                      >
-                        Confirm Reset
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                <span className="text-muted-foreground text-lg select-none hidden sm:inline">|</span>
-                <span className="text-xs text-muted-foreground">Last updated: 2 days ago</span>
-              </div>
-              <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="default"
-                    className="px-6 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-800 dark:text-white dark:border-purple-500 font-semibold text-sm shadow-sm hover:bg-purple-100 hover:border-purple-300 transition focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      setShowSaveDialog(true)
-                    }}
-                  >
-                    Save
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Save Changes?</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to save your changes? This will update your settings immediately.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
-                      onClick={() => {
-                        setShowSaveDialog(false) /* handle actual save */
-                      }}
-                    >
-                      Confirm Save
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        )
-      case 1: // Account & Privacy
+      case 0: // Account & Privacy
         return (
           <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col min-h-[500px]">
             <h1 className="text-2xl font-extrabold text-foreground mb-1 tracking-tight">Account & Privacy</h1>
@@ -525,18 +684,63 @@ export default function SettingsPage() {
             <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4">Account Information</h2>
               <div className="flex flex-col gap-4">
-                {/* Email Address */}
+                {/* Authentication Status */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-foreground">Email Address</label>
+                  <label className="text-xs font-semibold text-foreground">Authentication Status</label>
+                  <AuthStatus />
+                </div>
+                
+                {/* Full Name */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-foreground">Full Name</label>
                   <div className="flex items-center gap-2">
                     <input
+                      type="text"
+                      className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground font-semibold text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
+                      value={user?.fullName || ""}
+                      readOnly
+                      disabled
+                      placeholder={!user?.fullName ? "Loading..." : "Your full name"}
+                    />
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
+                      Read-only
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Username */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-foreground">Username</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground font-mono font-semibold text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
+                      value={user?.username ? `@${user.username}` : ""}
+                      readOnly
+                      disabled
+                      placeholder={!user?.username ? "Loading..." : "@username"}
+                    />
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded-lg">
+                      Read-only
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Email Address */}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="email-input" className="text-xs font-semibold text-foreground">Email Address</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="email-input"
                       type="email"
                       className="w-full rounded-xl border border-border px-4 py-2 bg-muted text-foreground font-mono font-semibold text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition"
                       value={emailDraft}
                       onChange={handleEmailChange}
                       readOnly={!isEditingEmail}
-                      disabled={!isEditingEmail}
+                      disabled={!isEditingEmail || isLoading}
                       ref={emailInputRef}
+                      aria-describedby="email-status"
+                      placeholder={!user?.email ? "Loading..." : "Enter your email"}
                     />
                     {isEditingEmail ? (
                       <>
@@ -545,14 +749,18 @@ export default function SettingsPage() {
                           variant="default"
                           className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white px-3 py-1.5 text-xs font-medium hover:bg-purple-700 dark:hover:bg-purple-900"
                           onClick={handleEmailSave}
+                          disabled={isLoading || !emailDraft || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDraft) || !isOnline}
+                          aria-label="Save email changes"
                         >
-                          Save
+                          {isLoading ? "Saving..." : !isOnline ? "Offline" : "Save"}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           className="px-3 py-1.5 text-xs font-medium bg-transparent"
                           onClick={handleEmailCancel}
+                          disabled={isLoading}
+                          aria-label="Cancel email changes"
                         >
                           Cancel
                         </Button>
@@ -562,59 +770,97 @@ export default function SettingsPage() {
                         variant="outline"
                         className="border-border text-purple-700 bg-muted hover:bg-muted/80 hover:border-purple-300 px-3 py-1.5 text-xs font-medium flex items-center gap-1"
                         onClick={handleEmailEdit}
+                        disabled={isLoading}
+                        aria-label="Edit email address"
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="w-4 h-4" aria-hidden="true" />
                         Change
                       </Button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4 inline" />
-                      Verified
+                  <div className="flex items-center gap-2 mt-1" id="email-status">
+                    {user?.email ? (
+                      <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4 inline" aria-hidden="true" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <RefreshCw className="w-4 h-4 inline animate-spin" aria-hidden="true" />
+                        Loading...
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Account Details */}
+                <div className="flex flex-col gap-2 pt-4 border-t border-border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Account Created</span>
+                    <span className="text-xs font-medium text-foreground">
+                      {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Loading..."}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Last Login</span>
+                    <span className="text-xs font-medium text-foreground">
+                      {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Loading..."}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Account Status</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      user?.status === 'active' 
+                        ? 'text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-200' 
+                        : 'text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-200'
+                    }`}>
+                      {user?.status === 'active' ? 'Active' : user?.status || 'Loading...'}
                     </span>
                   </div>
                 </div>
+
               </div>
             </div>
             {/* Theme Preference Toggle - moved here */}
             <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4">Theme Preference</h2>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition shadow-sm focus:outline-none ${theme === "system" ? "bg-purple-50 dark:bg-purple-950 border-purple-400 dark:border-purple-800 text-purple-700 dark:text-purple-200 ring-2 ring-purple-200 dark:ring-purple-800" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
+                    className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition shadow-sm focus:outline-none flex-1 sm:flex-none ${mounted && theme === "system" ? "bg-purple-50 dark:bg-purple-950 border-purple-400 dark:border-purple-800 text-purple-700 dark:text-purple-200 ring-2 ring-purple-200 dark:ring-purple-800" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
                     onClick={() => setTheme("system")}
                   >
-                    <CheckCircle className={`w-4 h-4 ${theme === "system" ? "text-purple-600" : "invisible"}`} />
-                    Auto (Sync with System)
+                    <CheckCircle className={`w-4 h-4 ${mounted && theme === "system" ? "text-purple-600" : "invisible"}`} />
+                    <span className="hidden sm:inline">Auto (Sync with System)</span>
+                    <span className="sm:hidden">Auto</span>
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition shadow-sm focus:outline-none ${theme === "light" ? "bg-yellow-50 dark:bg-yellow-900 border-yellow-400 dark:border-yellow-800 text-yellow-700 dark:text-yellow-200 ring-2 ring-yellow-200 dark:ring-yellow-800" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
+                    className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition shadow-sm focus:outline-none flex-1 sm:flex-none ${mounted && theme === "light" ? "bg-yellow-50 dark:bg-yellow-900 border-yellow-400 dark:border-yellow-800 text-yellow-700 dark:text-yellow-200 ring-2 ring-yellow-200 dark:ring-yellow-800" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
                     onClick={() => setTheme("light")}
                   >
                     <Sun className="w-4 h-4" />
-                    Light Mode
+                    <span className="hidden sm:inline">Light Mode</span>
+                    <span className="sm:hidden">Light</span>
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition shadow-sm focus:outline-none ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white ring-2 ring-gray-400 dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100 dark:ring-gray-700" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
+                    className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition shadow-sm focus:outline-none flex-1 sm:flex-none ${mounted && theme === "dark" ? "bg-gray-900 border-gray-700 text-white ring-2 ring-gray-400 dark:bg-gray-950 dark:border-gray-800 dark:text-gray-100 dark:ring-gray-700" : "bg-card border-border text-foreground hover:bg-muted dark:hover:bg-muted/40"}`}
                     onClick={() => setTheme("dark")}
                   >
                     <Moon className="w-4 h-4" />
-                    Dark Mode
+                    <span className="hidden sm:inline">Dark Mode</span>
+                    <span className="sm:hidden">Dark</span>
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 sm:mt-0">Choose how Inkly appears to you</p>
+                <p className="text-xs text-muted-foreground">Choose how Inkly appears to you</p>
               </div>
             </div>
             {/* Privacy Settings */}
-            <div className="mb-8">
+            {/* <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4">Privacy Settings</h2>
               <div className="flex flex-col gap-6">
-                {/* Profile Visibility */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="text-xs font-semibold text-foreground">Profile Visibility</label>
@@ -630,7 +876,6 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {/* Search Engine Indexing */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="text-xs font-semibold text-foreground">Search Engine Indexing</label>
@@ -641,7 +886,6 @@ export default function SettingsPage() {
                     className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-gray-200 border-purple-200"
                   />
                 </div>
-                {/* Analytics & Insights */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="text-xs font-semibold text-foreground">Analytics & Insights</label>
@@ -653,7 +897,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-            </div>
+            </div> */}
             {/* Data Management */}
             <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4">Data Management</h2>
@@ -695,89 +939,15 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </div>
-            {/* Footer actions */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mt-auto pt-6 border-t border-border gap-4">
-              <div className="flex items-center gap-3">
-                <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="px-4 py-1.5 rounded-lg border-border text-foreground bg-card font-medium text-xs hover:bg-muted transition"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setShowResetDialog(true)
-                      }}
-                    >
-                      Reset to defaults
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Reset to Defaults?</DialogTitle>
-                      <DialogDescription>
-                        This will revert all settings in this section to their original values. Are you sure?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowResetDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          setShowResetDialog(false) /* handle actual reset */
-                        }}
-                      >
-                        Confirm Reset
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                <span className="text-muted-foreground text-lg select-none hidden sm:inline">|</span>
-                <span className="text-xs text-muted-foreground">Last updated: 2 days ago</span>
-              </div>
-              <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="default"
-                    className="px-6 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-800 dark:text-white dark:border-purple-500 font-semibold text-sm shadow-sm hover:bg-purple-100 hover:border-purple-300 transition focus:ring-2 focus:ring-purple-200 focus:outline-none"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      setShowSaveDialog(true)
-                    }}
-                  >
-                    Save
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Save Changes?</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to save your changes? This will update your settings immediately.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      className="bg-purple-600 dark:bg-purple-800 text-white dark:text-white hover:bg-purple-700 dark:hover:bg-purple-900 font-semibold px-4 py-2 rounded-lg transition"
-                      variant="default"
-                      onClick={() => {
-                        setShowSaveDialog(false) /* handle actual save */
-                      }}
-                    >
-                      Confirm Save
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+            {/* Footer - just last updated info */}
+            <div className="flex items-center justify-end mt-auto pt-6 border-t border-border">
+              <span className="text-xs text-muted-foreground">Last updated: 2 days ago</span>
             </div>
           </div>
         )
-      case 2: // Notifications
+      case 1: // Notifications
         return <NotificationSettings />
-      case 3: // Badges & Achievements
+      case 2: // Badges & Achievements
         return (
           <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col min-h-[300px]">
             <h1 className="text-2xl font-extrabold text-foreground mb-1 tracking-tight">Badges & Achievements</h1>
@@ -891,7 +1061,7 @@ export default function SettingsPage() {
             </div>
           </div>
         )
-      case 4: // Content Preferences
+      case 3: // Content Preferences
         return (
           <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col min-h-[400px]">
             <h1 className="text-2xl font-extrabold text-foreground mb-1 tracking-tight">Content Preferences</h1>
@@ -900,7 +1070,7 @@ export default function SettingsPage() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-base font-semibold text-foreground">Your Topics</h2>
-                <span className="text-xs text-muted-foreground">{userTopics.length} of 15 selected</span>
+                <span className="text-xs text-muted-foreground">{userTopics.length} of 7 selected</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {userTopics.map((topic) => (
@@ -920,46 +1090,7 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
-            {/* Recommended for You */}
-            <div className="mb-6">
-              <h2 className="text-base font-semibold text-foreground mb-2">Recommended for You</h2>
-              <p className="text-xs text-muted-foreground mb-2">Based on your activity and trending topics</p>
-              <div className="flex flex-wrap gap-2">
-                {suggestedTopics.map((topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-muted text-foreground text-xs font-medium border border-border hover:bg-purple-50 hover:text-purple-700 transition"
-                    onClick={() => handleAddSuggestedTopic(topic)}
-                  >
-                    + {topic}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Add Custom Topics */}
-            <div className="mb-8">
-              <h2 className="text-base font-semibold text-foreground mb-2">Add Custom Topics</h2>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  className="flex-1 rounded-md border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
-                  placeholder="Search for topics..."
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddCustomTopic}
-                  className="h-10 px-4 bg-black text-white font-semibold rounded-md hover:bg-purple-600"
-                >
-                  Add Topic
-                </Button>
-              </div>
-              <div className="text-xs text-muted-foreground bg-muted rounded-md px-3 py-2">
-                You can select up to 15 topics to personalize your feed. Popular suggestions will appear as you type.
-              </div>
-            </div>
+
             {/* Discovery Settings */}
             <div className="mb-8">
               <h2 className="text-base font-semibold text-foreground mb-4">Discovery Settings</h2>
@@ -1074,7 +1205,7 @@ export default function SettingsPage() {
             </div>
           </div>
         )
-      case 5: // Security
+      case 4: // Security
         return (
           <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col min-h-[400px]">
             {/* Password Section */}
@@ -1361,9 +1492,9 @@ export default function SettingsPage() {
             </div>
           </div>
         )
-      case 6: // Danger Zone
+      case 5: // Danger Zone
         return (
-          <div className="bg-card rounded-3xl border border-border shadow-sm p-8 flex flex-col gap-6">
+          <div className="bg-card rounded-3xl border border-border shadow-sm p-5 md:p-8 flex flex-col gap-6">
             <div className="mb-3">
               <h1 className="text-2xl font-extrabold text-red-600 mb-1 tracking-tight">Danger Zone</h1>
               <p className="text-muted-foreground text-sm">Sensitive actions for your account</p>
@@ -1467,6 +1598,18 @@ export default function SettingsPage() {
       default:
         return null
     }
+  }, [activeTab, email, emailDraft, isEditingEmail, userTopics, showBadgesOnProfile, achievementNotifications, showNewTopics, topicRecommendations, currentPassword, newPassword, confirmPassword, sessions, loginNotifications, suspiciousAlerts, theme, showPassword, pushNotifications, notifPushFollower, notifPushReaction, notifEmailDigest, notifEmailNewsletter, notifEmailSecurity, showSaveDialog, showResetDialog, pendingRemoveTopic, pendingSignOutSession, showSignOutAllDialog, emailDialogOpen, emailDialogMessage, emailWarningDialogOpen, settingDialogOpen, settingDialogMessage, toast, mounted])
+
+
+
+  // Show full page loader while data is loading
+  if (isLoading) {
+    return <FullPageLoader />
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return <ErrorState error={error.message} onRetry={retryOperation} />
   }
 
   return (
@@ -1480,13 +1623,16 @@ export default function SettingsPage() {
 
           {/* Settings Content */}
           <div className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 md:py-8">
-            {/* Horizontally scrollable nav for mobile - icons only, no text */}
+            {/* Network Warning */}
+            <NetworkWarning variant="banner" />
+
+                        {/* Horizontally scrollable nav for mobile - icons only, no text */}
             <div className="md:hidden mb-6">
-              <nav className="flex gap-2 overflow-x-auto no-scrollbar py-2 px-1 bg-card rounded-2xl border border-border shadow-sm">
+              <nav className="flex gap-2 justify-between py-2 px-1 bg-card rounded-2xl border border-border shadow-sm" role="tablist" aria-label="Settings navigation">
                 {navSections.map((item, i) => (
                   <button
                     key={item.label}
-                    className={`flex items-center justify-center min-w-[44px] h-10 rounded-xl transition border font-medium focus:outline-none
+                    className={`flex items-center justify-center flex-1 min-w-[44px] h-10 rounded-xl transition border font-medium focus:outline-none focus:ring-2 focus:ring-purple-200 focus:ring-offset-2
                       ${
                         i === activeTab
                           ? item.danger
@@ -1499,7 +1645,12 @@ export default function SettingsPage() {
                     `}
                     onClick={() => setActiveTab(i)}
                     aria-current={i === activeTab ? "page" : undefined}
-                    style={{ minWidth: 44 }}
+                    role="tab"
+                    aria-selected={i === activeTab}
+                    aria-controls={`panel-${i}`}
+                    id={`mobile-tab-${i}`}
+                    disabled={isLoading}
+                    aria-label={item.label}
                   >
                     <span
                       className={`rounded-lg p-1 ${
@@ -1510,7 +1661,7 @@ export default function SettingsPage() {
                           : "bg-muted dark:bg-muted/40 text-muted-foreground group-hover:bg-purple-50 dark:group-hover:bg-purple-950 group-hover:text-purple-500 dark:group-hover:text-purple-200"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className="w-4 h-4" aria-hidden="true" />
                     </span>
                   </button>
                 ))}
@@ -1522,7 +1673,7 @@ export default function SettingsPage() {
               <aside className="hidden md:block w-full md:w-80 flex-shrink-0 mb-4 md:mb-0">
                 <div className="bg-card rounded-3xl border border-border shadow-sm p-4 md:p-8 flex flex-col gap-3">
                   <h2 className="text-base md:text-lg font-bold mb-4 text-foreground tracking-tight">Settings</h2>
-                  <nav className="flex flex-col gap-1.5">
+                  <nav className="flex flex-col gap-1.5" role="tablist" aria-label="Settings navigation">
                     {navSections.map((item, i) => (
                       <button
                         key={item.label}
@@ -1539,6 +1690,11 @@ export default function SettingsPage() {
                           ${item.danger && i !== activeTab ? "" : ""}`}
                         onClick={() => setActiveTab(i)}
                         aria-current={i === activeTab ? "page" : undefined}
+                        role="tab"
+                        aria-selected={i === activeTab}
+                        aria-controls={`panel-${i}`}
+                        id={`tab-${i}`}
+                        disabled={isLoading}
                       >
                         <span
                           className={`rounded-lg p-2 ${
@@ -1549,7 +1705,7 @@ export default function SettingsPage() {
                               : "bg-muted dark:bg-muted/40 text-muted-foreground group-hover:bg-purple-50 dark:group-hover:bg-purple-950 group-hover:text-purple-500 dark:group-hover:text-purple-200"
                           }`}
                         >
-                          <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                          <item.icon className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
                         </span>
                         <div className="flex flex-col items-start">
                           <span className="font-semibold leading-tight text-xs md:text-sm text-foreground">
@@ -1572,6 +1728,9 @@ export default function SettingsPage() {
                     exit={{ opacity: 0, x: -32 }}
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     className="h-full w-full overflow-x-hidden"
+                    role="tabpanel"
+                    id={`panel-${activeTab}`}
+                    aria-labelledby={`tab-${activeTab}`}
                   >
                     {renderPanel()}
                   </motion.div>

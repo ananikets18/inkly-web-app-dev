@@ -1,7 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Zap, ExternalLink, Play, Star } from "lucide-react"
+import { Zap, ExternalLink, Play, Star, BarChart3, BookOpen, PenTool, Users, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -20,41 +19,61 @@ const newsItems: NewsItem[] = [
   {
     id: "1",
     type: "feature",
-    title: "Mood-Based Discovery",
-    description: "Find inks that match your current emotional state with our new AI-powered mood detection.",
+    title: "Inkly Studio - Creator Dashboard",
+    description: "Track your content performance with detailed analytics, manage drafts, and monitor your growth with our comprehensive creator tools.",
     image: "/placeholder.svg?height=120&width=200",
     badge: "New Feature",
-    link: "#",
+    link: "/studio",
     isNew: true,
   },
   {
     id: "2",
-    type: "spotlight",
-    title: "Creator Spotlight: Maya Chen",
-    description: "Meet the poet whose vulnerability has touched thousands of hearts across the platform.",
+    type: "feature",
+    title: "Collections & Bookmarks",
+    description: "Organize your favorite inks into personalized collections. Save inspiration, create themed collections, and keep your discoveries organized.",
     image: "/placeholder.svg?height=120&width=200",
-    badge: "Spotlight",
-    link: "#",
-    isNew: false,
+    badge: "New Feature",
+    link: "/profile",
+    isNew: true,
   },
   {
     id: "3",
     type: "update",
     title: "Enhanced Echo System",
-    description: "Echoes now show emotional resonance levels and suggest similar content you might love.",
+    description: "React with emotions, add reflections, and share your thoughts. Our echo system now includes reactions, bookmarks, and meaningful interactions.",
     image: "/placeholder.svg?height=120&width=200",
     badge: "Update",
-    link: "#",
-    isNew: true,
+    link: "/",
+    isNew: false,
   },
   {
     id: "4",
-    type: "event",
-    title: "Poetry Month Challenge",
-    description: "Join thousands in our 30-day poetry challenge. Share your daily verses and win prizes!",
+    type: "feature",
+    title: "Personal Analytics Dashboard",
+    description: "Track your writing journey with detailed insights. Monitor your XP progress, view engagement metrics, and understand your audience better.",
     image: "/placeholder.svg?height=120&width=200",
-    badge: "Event",
-    link: "#",
+    badge: "New Feature",
+    link: "/analytics",
+    isNew: true,
+  },
+  {
+    id: "5",
+    type: "update",
+    title: "Smart Draft Management",
+    description: "Save your work in progress with our enhanced draft system. Auto-save, organize drafts, and never lose your creative flow again.",
+    image: "/placeholder.svg?height=120&width=200",
+    badge: "Update",
+    link: "/drafts",
+    isNew: false,
+  },
+  {
+    id: "6",
+    type: "spotlight",
+    title: "Community Spotlight: Maya Chen",
+    description: "Meet the poet whose vulnerability has touched thousands of hearts across the platform. Discover her journey and latest works.",
+    image: "/placeholder.svg?height=120&width=200",
+    badge: "Spotlight",
+    link: "/maya_chen",
     isNew: false,
   },
 ]
@@ -98,89 +117,69 @@ export default function WhatsNewOnInkly() {
             id="whats-new-heading"
             className="text-2xl sm:text-3xl font-bold text-foreground flex items-center justify-center gap-3 mb-4"
           >
-            <span className="text-2xl" role="img" aria-label="Lightning bolt">
-              ⚡
+            <span className="text-2xl" role="img" aria-label="Sparkles">
+              ✨
             </span>
             What's New on Inkly
-            <Badge className="ml-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white border-0 text-xs font-semibold px-3 py-1 rounded-full shadow-lg tracking-wide">
-              Fresh
-            </Badge>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Stay updated with the latest features, creator spotlights, and platform updates
+            Stay updated with the latest features, updates, and community highlights
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-          {newsItems.map((item, index) => (
-            <motion.article
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {newsItems.map((item) => (
+            <article
               key={item.id}
-              className="bg-card rounded-2xl shadow-lg border border-border/50 overflow-hidden group hover:shadow-xl transition-all duration-300 cursor-pointer w-full"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ y: -4, scale: 1.02 }}
+              className="bg-card rounded-2xl shadow-lg border border-border/50 overflow-hidden hover:shadow-xl transition-shadow duration-300"
               tabIndex={0}
               role="article"
               aria-labelledby={`news-${item.id}-title`}
-              aria-describedby={`news-${item.id}-description`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  // Handle news item click
-                }
-              }}
             >
-              {/* Image */}
-              {item.image && (
-                <div className="relative h-32 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
-                  <img
-                    src={item.image || "/placeholder.svg"}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  {item.isNew && (
-                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold animate-pulse">
-                      New
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <Badge className={`${getBadgeStyle(item.type)} border-0 flex items-center gap-1 text-xs`}>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge
+                    className={`${getBadgeStyle(item.type)} border-0 flex items-center gap-1`}
+                    aria-label={item.badge}
+                  >
                     {getIcon(item.type)}
                     {item.badge}
                   </Badge>
+                  {item.isNew && (
+                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                      NEW
+                    </span>
+                  )}
                 </div>
 
                 <h3
                   id={`news-${item.id}-title`}
-                  className="font-bold text-foreground mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors"
+                  className="text-lg font-semibold text-foreground mb-3 leading-tight"
                 >
                   {item.title}
                 </h3>
 
-                <p
-                  id={`news-${item.id}-description`}
-                  className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-4"
-                >
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                   {item.description}
                 </p>
 
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/20 group-hover:bg-purple-50 dark:group-hover:bg-purple-950/20 transition-colors"
-                  aria-label={`Learn more about ${item.title}`}
+                  className="w-full"
+                  onClick={() => {
+                    if (item.link.startsWith('/')) {
+                      window.location.href = item.link
+                    } else {
+                      window.open(item.link, '_blank')
+                    }
+                  }}
                 >
                   Learn More
-                  <ExternalLink className="w-3 h-3 ml-1" aria-hidden="true" />
+                  <ExternalLink className="w-3 h-3 ml-2" aria-hidden="true" />
                 </Button>
               </div>
-            </motion.article>
+            </article>
           ))}
         </div>
       </div>

@@ -1,33 +1,107 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight, Award, Heart, MessageCircle, Bookmark } from "lucide-react"
+import { useState, useRef, useCallback } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Clock, Eye } from "lucide-react"
+import { truncate } from "@/utils/truncate"
 import { formatCount } from "@/utils/formatCount"
+import Link from "next/link"
 
 interface EditorInk {
   id: string
   content: string
   author: string
   avatarColor: string
-  tags: string[]
-  reactions: number
-  echoes: number
+  views: number
   readingTime: string
 }
 
+// Simplified InkCard component for editors picks
+const SimpleInkCard = ({ ink, onClick }: { ink: EditorInk; onClick: () => void }) => {
+  const [expanded, setExpanded] = useState(false)
+  const TRUNCATE_LENGTH = 120
+  const isTruncatable = ink.content.length > TRUNCATE_LENGTH
+  const displayContent = expanded || !isTruncatable ? ink.content : truncate(ink.content, TRUNCATE_LENGTH)
+
+  return (
+    <div
+      className="w-full bg-card rounded-xl shadow-sm px-4 py-5 mb-4 sm:border sm:border-border cursor-pointer hover:shadow-md transition-shadow"
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Link href={`/${encodeURIComponent(ink.author)}`} passHref legacyBehavior>
+            <div className="relative cursor-pointer">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback className={`bg-gradient-to-br ${ink.avatarColor} text-white text-sm font-medium`}>
+                  {ink.author.split(" ").map((n) => n[0]).join("")}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </Link>
+          <Link href={`/${encodeURIComponent(ink.author)}`} className="group">
+            <div className="flex flex-col -space-y-1 cursor-pointer" onClick={e => e.stopPropagation()}>
+              <span className="text-sm font-semibold text-foreground flex items-center gap-1">
+                {ink.author}
+              </span>
+              <span className="text-xs text-muted-foreground">2h ago</span>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-4 text-base sm:text-[16px] md:text-[17px] lg:text-[18px] font-semibold text-foreground leading-relaxed sm:leading-relaxed md:leading-relaxed lg:leading-relaxed whitespace-pre-line sm:px-2 sm:py-2">
+        <Link href={`/ink/${ink.id}`} passHref legacyBehavior>
+          <a style={{ color: "inherit", textDecoration: "none" }} onClick={(e) => e.stopPropagation()}>
+            {displayContent}
+            {isTruncatable && (
+              <button
+                className="ml-2 text-xs text-purple-600 underline hover:text-purple-800 transition-colors font-medium"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded(!expanded)
+                }}
+              >
+                {expanded ? "Read less" : "Read more"}
+              </button>
+            )}
+          </a>
+        </Link>
+      </div>
+
+      <div className="flex justify-between items-center text-xs text-muted-foreground pt-2 border-t border-border">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            {formatCount(ink.views)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {ink.readingTime}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// TODO: Replace with real backend data
+// This will be replaced with actual user-generated inks that meet editor's pick criteria:
+// - High engagement (views, reactions, echoes)
+// - Quality content (no profanity, meaningful length)
+// - Recent activity (within last 7 days)
+// - Diverse authors (not all from same user)
+// - Positive sentiment score
 const editorInks: EditorInk[] = [
   {
     id: "1",
     content: "The moon doesn't compete with the sun. It simply shines when it's time to shine.",
     author: "Luna Martinez",
     avatarColor: "from-purple-500 to-pink-500",
-    tags: ["#wisdom", "#nature"],
-    reactions: 847,
-    echoes: 234,
+    views: 1247,
     readingTime: "30s",
   },
   {
@@ -35,9 +109,7 @@ const editorInks: EditorInk[] = [
     content: "Your healing is not a destination. It's a daily practice of choosing yourself over and over again.",
     author: "Dr. Sarah Chen",
     avatarColor: "from-emerald-500 to-teal-500",
-    tags: ["#healing", "#selfcare"],
-    reactions: 1203,
-    echoes: 456,
+    views: 2103,
     readingTime: "45s",
   },
   {
@@ -46,9 +118,7 @@ const editorInks: EditorInk[] = [
       "We are all just walking each other home. Some paths are longer, some shorter, but we're all heading to the same place.",
     author: "Marcus Thompson",
     avatarColor: "from-blue-500 to-cyan-500",
-    tags: ["#philosophy", "#connection"],
-    reactions: 692,
-    echoes: 178,
+    views: 1692,
     readingTime: "1m",
   },
   {
@@ -56,9 +126,7 @@ const editorInks: EditorInk[] = [
     content: "The art of being happy lies in the power of extracting happiness from common things.",
     author: "Elena Rodriguez",
     avatarColor: "from-orange-500 to-red-500",
-    tags: ["#happiness", "#mindfulness"],
-    reactions: 934,
-    echoes: 287,
+    views: 1934,
     readingTime: "35s",
   },
   {
@@ -66,9 +134,7 @@ const editorInks: EditorInk[] = [
     content: "Your story is not over. The pen is still in your hand, and there are blank pages waiting.",
     author: "James Wilson",
     avatarColor: "from-violet-500 to-purple-500",
-    tags: ["#hope", "#resilience"],
-    reactions: 1456,
-    echoes: 523,
+    views: 2456,
     readingTime: "40s",
   },
 ]
@@ -77,8 +143,9 @@ export default function EditorsInks() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
+  const router = useRouter()
 
-  const scroll = (direction: "left" | "right") => {
+  const scroll = useCallback((direction: "left" | "right") => {
     if (!scrollRef.current) return
 
     const scrollAmount = 320
@@ -88,15 +155,19 @@ export default function EditorsInks() {
       left: newScrollLeft,
       behavior: "smooth",
     })
-  }
+  }, [])
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     if (!scrollRef.current) return
 
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
     setCanScrollLeft(scrollLeft > 0)
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
-  }
+  }, [])
+
+  const handleInkClick = useCallback((inkId: string) => {
+    router.push(`/ink/${inkId}`)
+  }, [router])
 
   return (
     <section className="py-12 px-4 sm:px-6 lg:px-8" aria-labelledby="editors-inks-heading">
@@ -147,73 +218,14 @@ export default function EditorsInks() {
           role="region"
           aria-label="Editor's picks carousel"
         >
-          {editorInks.map((ink, index) => (
-            <motion.article
+          {editorInks.map((ink) => (
+            <div
               key={ink.id}
-              className="flex-none w-80 max-w-xs w-full sm:w-80 bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden group hover:shadow-2xl transition-all duration-300"
+              className="flex-none w-80 max-w-xs w-full sm:w-80"
               style={{ scrollSnapAlign: "start" }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              tabIndex={0}
-              role="article"
-              aria-labelledby={`ink-${ink.id}-content`}
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Badge
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 flex items-center gap-1"
-                    aria-label="Editor's pick"
-                  >
-                    <Award className="w-3 h-3" aria-hidden="true" />
-                    Editor's Pick
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{ink.readingTime}</span>
-                </div>
-
-                <blockquote
-                  id={`ink-${ink.id}-content`}
-                  className="text-lg font-semibold text-foreground leading-relaxed mb-6 line-clamp-4"
-                >
-                  "{ink.content}"
-                </blockquote>
-
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className={`bg-gradient-to-br ${ink.avatarColor} text-white text-sm font-medium`}>
-                      {ink.author
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{ink.author}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {ink.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs text-purple-600 hover:text-purple-800 cursor-pointer transition-colors"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" aria-hidden="true" />
-                      <span>{formatCount(ink.reactions)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.article>
+              <SimpleInkCard ink={ink} onClick={() => handleInkClick(ink.id)} />
+            </div>
           ))}
         </div>
       </div>

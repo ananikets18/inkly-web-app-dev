@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import { User, RefreshCw } from "lucide-react"
 
 import Header from "@/components/Header"
 import SideNav from "@/components/SideNav"
@@ -11,94 +12,208 @@ import BottomNav from "@/components/BottomNav"
 import Footer from "@/components/Footer"
 
 import UserIdentityPanel from "@/components/profile/UserIdentityPanel"
-import ProgressAchievementsSidebar from "@/components/profile/ProgressAchievementsSidebar"
 import ContentTabs from "@/components/profile/ContentTabs"
 import PinnedInksSection from "@/components/profile/PinnedInksSection"
 import AchievementsModal from "@/components/AchievementsModal"
 import FollowersModal from "@/components/profile/FollowersModal"
 import FollowingModal from "@/components/profile/FollowingModal"
+import PerformanceMonitor from "@/components/PerformanceMonitor"
 
 import { useToast } from "@/hooks/use-toast"
+import { useProfilePerformance } from "@/hooks/useProfilePerformance"
+import { useProfileData } from "@/hooks/useProfileData"
+import { NetworkWarning } from "@/components/NetworkWarning"
+// Authentication removed - using mock authentication
 
 /* -------------------------------------------------------------------------- */
-/*                              MOCK USER DATA                               */
+/*                              CONSTANTS                                    */
 /* -------------------------------------------------------------------------- */
-
-const mockUserData = {
-  id: "cosmic-ray",
-  name: "Cosmic Ray",
-  username: "@cosmicray",
-  bio: "Collecting stardust and weaving words into constellations. ✨ Believer in the magic of midnight thoughts and morning coffee.",
-  location: "San Francisco, CA",
-  joinedDate: "March 2023",
-  avatar: "from-purple-400 to-pink-400",
-  avatarColor: "#6BCB77",
-  pronouns: "they/them",
-  level: 12,
-  xp: 2847,
-  xpToNext: 3200,
-  externalLinks: [
-    { url: "https://twitter.com/cosmicray", label: "Twitter" },
-    { url: "https://instagram.com/cosmic.ray.art", label: "Instagram" },
-  ],
-  stats: {
-    echoes: 15420,
-    followers: 2847,
-    following: 892,
-    totalInks: 156,
-  },
-}
-
-const mockAchievements = [
-  {
-    id: 1,
-    name: "Wordsmith",
-    icon: "✍️",
-    description: "Created 50+ beautiful inks",
-    rarity: "rare" as const,
-    earned: "2 weeks ago",
-    category: "Creation",
-    unlocked: true,
-  },
-  /* ...additional mock achievements... */
-]
-
-const mockInks = [
-  {
-    id: 1,
-    content:
-      "The stars don't compete with each other; they simply shine. Maybe that's the secret to finding peace in a world that constantly asks us to compare.",
-    author: "Cosmic Ray",
-    avatarColor: "#6BCB77",
-    views: 4200,
-    reactionCount: 89,
-    reflectionCount: 23,
-    bookmarkCount: 156,
-    readingTime: { text: "30 sec", minutes: 0.5 },
-    echoCount: 12,
-    echoUsers: [
-      { name: "Luna", avatar: "from-blue-400 to-cyan-400" },
-      { name: "Sol", avatar: "from-yellow-400 to-orange-400" },
-    ],
-    isPinned: true,
-    tags: ["wisdom", "mindfulness", "peace"],
-    createdAt: "2024-01-15T10:30:00Z",
-  },
-  /* ...additional mock inks... */
-]
 
 const MAX_PINS = 3
+
+// Full Page Loader Component for Profile
+function FullPageLoader() {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950 dark:via-background dark:to-orange-950"
+      >
+        <div className="text-center">
+          {/* Animated Logo/Icon */}
+          <motion.div
+            animate={{ 
+              rotate: 360,
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="mx-auto mb-8 w-20 h-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl"
+          >
+            <User className="w-10 h-10 text-white" />
+          </motion.div>
+
+          {/* Loading Text */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-bold text-gray-800 dark:text-white mb-4"
+          >
+            Loading Profile
+          </motion.h2>
+
+          {/* Loading Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto"
+          >
+            Gathering your profile data and achievements...
+          </motion.p>
+
+          {/* Animated Dots */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex justify-center space-x-2"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ 
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-3 h-3 bg-purple-500 rounded-full"
+              />
+            ))}
+          </motion.div>
+
+          {/* Progress Bar */}
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="mt-8 w-64 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-purple-500 to-orange-500"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+// Error State Component for Profile
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950 dark:via-background dark:to-red-950">
+      <div className="text-center max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="mx-auto mb-6 w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+        >
+          <User className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          Profile Unavailable
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {error}
+        </p>
+        
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /* -------------------------------------------------------------------------- */
 /*                              PROFILE COMPONENT                             */
 /* -------------------------------------------------------------------------- */
 
-export default function ProfilePage() {
-  /* ----------------------------- Local State ----------------------------- */
-  const [userData, setUserData] = useState(mockUserData)
-  const [isOwnProfile] = useState(true)
+import AuthGuard from "@/components/AuthGuard"
 
-  const [isFollowing, setIsFollowing] = useState(false)
+export default function ProfilePage() {
+  return (
+    <AuthGuard>
+      <ProfilePageContent />
+    </AuthGuard>
+  )
+}
+
+function ProfilePageContent() {
+  /* ----------------------------- Local State ----------------------------- */
+  // Get authenticated user data
+  // Mock user for demo
+  const user = {
+    id: "demo-user-id",
+    fullName: "Demo User",
+    username: "demo_user",
+    email: "demo@example.com",
+    avatarUrl: undefined,
+    bio: "This is a demo profile for testing purposes.",
+    status: "active" as const,
+    onboarded: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+    provider: "demo"
+  }
+  const userId = user?.id || "current-user-id"
+  
+  // Profile data management with real API integration
+  const {
+    userData,
+    achievements,
+    createdInks,
+    reflectedInks,
+    bookmarkedInks,
+    pinnedInks,
+    followers,
+    following,
+    isFollowing,
+    isLoading,
+    error,
+    hasMore,
+    handleFollow,
+    handlePinInk,
+    handleUnpinInk,
+    handleLoadMore,
+    clearError
+  } = useProfileData({
+    userId,
+    enableRealAPI: false, // Set to true when backend is ready
+    fallbackToMock: true
+  })
+
+  const [isOwnProfile] = useState(userId === user?.id)
   const [isFollowLoading, setIsFollowLoading] = useState(false)
   const [followIntent, setFollowIntent] = useState<"follow" | "unfollow" | null>(null)
 
@@ -106,218 +221,299 @@ export default function ProfilePage() {
   const [followersModalOpen, setFollowersModalOpen] = useState(false)
   const [followingModalOpen, setFollowingModalOpen] = useState(false)
 
-  const [createdInks, setCreatedInks] = useState(mockInks)
-  const [reflectedInks] = useState<any[]>([])
-  const [bookmarkedInks] = useState<any[]>([])
-  const [pinnedInks, setPinnedInks] = useState(mockInks.filter((ink) => ink.isPinned))
-  const [hasMore, setHasMore] = useState({
-    created: true,
-    reflected: false,
-    bookmarked: false,
+  // Performance monitoring
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Performance optimization hook
+  const {
+    metrics,
+    isMemoryWarning,
+    performanceWarnings,
+    trackApiCall,
+    updateCardCount,
+    finishLoading,
+    performMemoryCleanup,
+    getPerformanceSummary,
+    isMonitoringEnabled
+  } = useProfilePerformance({
+    maxCards: 80,
+    memoryThreshold: 150, // Increased threshold to reduce false warnings
+    enableMonitoring: process.env.NODE_ENV === 'development'
   })
-  const [loading, setLoading] = useState(false)
 
   const { toast } = useToast()
 
   /* -------------------------- Derived / Side-effects -------------------------- */
   useEffect(() => {
-    setPinnedInks(createdInks.filter((ink) => ink.isPinned))
-  }, [createdInks])
+    setMounted(true)
+    
+    // Show performance monitor in development
+    if (process.env.NODE_ENV === 'development') {
+      setShowPerformanceMonitor(true)
+    }
+    
+    return () => {
+      // Cleanup on unmount
+      if (isMonitoringEnabled) {
+        performMemoryCleanup()
+      }
+    }
+  }, [isMonitoringEnabled, performMemoryCleanup])
 
-  /* ------------------------------- Handlers ------------------------------ */
-  const handleFollow = async (e: React.MouseEvent) => {
+  // Track loading completion
+  useEffect(() => {
+    if (!isLoading && mounted) {
+      finishLoading()
+    }
+  }, [isLoading, mounted, finishLoading])
+
+  /* ----------------------------- Event Handlers ----------------------------- */
+  const handleFollowClick = async (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
+    if (isFollowLoading) return
+    
     setIsFollowLoading(true)
     setFollowIntent(isFollowing ? "unfollow" : "follow")
-
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    setIsFollowing(!isFollowing)
-    setIsFollowLoading(false)
-    setFollowIntent(null)
-
-    toast({
-      title: isFollowing ? "Unfollowed" : "Now following",
-      description: isFollowing ? `You unfollowed ${userData.name}` : `You're now following ${userData.name}`,
-    })
+    
+    try {
+      await handleFollow()
+      
+      toast({
+        title: isFollowing ? "Unfollowed" : "Following",
+        description: isFollowing 
+          ? `You've unfollowed ${userData?.name || 'this user'}`
+          : `You're now following ${userData?.name || 'this user'}`,
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update follow status. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    } finally {
+      setIsFollowLoading(false)
+      setFollowIntent(null)
+    }
   }
 
   const handleProfileUpdate = async (updatedData: any) => {
-    setUserData((prev) => ({ ...prev, ...updatedData }))
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    })
-  }
-
-  const handleLoadMore = async (tab: string) => {
-    if (loading || !hasMore[tab as keyof typeof hasMore]) return
-    setLoading(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    if (tab === "created") {
-      const newInks = Array.from({ length: 5 }, (_, i) => ({
-        ...mockInks[0],
-        id: createdInks.length + i + 1,
-        content: `This is a dynamically loaded ink #${createdInks.length + i + 1} by ${userData.name}.`,
-        isPinned: false,
-      }))
-      setCreatedInks((prev) => [...prev, ...newInks])
-
-      if (createdInks.length >= 50) {
-        setHasMore((prev) => ({ ...prev, created: false }))
-      }
-    }
-    setLoading(false)
-  }
-
-  const handlePinInk = (inkId: number) => {
-    if (pinnedInks.length >= MAX_PINS) {
+    try {
+      // In real app, call API to update profile
+      console.log("Profile updated:", updatedData)
+      
       toast({
-        title: "Pin Limit Reached",
-        description: `You can only pin up to ${MAX_PINS} inks. Please unpin one first.`,
-        variant: "destructive",
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+        duration: 3000,
       })
-      return
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
     }
-    setCreatedInks((prev) => prev.map((ink) => (ink.id === inkId ? { ...ink, isPinned: true } : ink)))
-    toast({ title: "Pinned to profile ✅", description: "This ink is now highlighted on your profile." })
   }
 
-  const handleUnpinInk = (inkId: number) => {
-    setCreatedInks((prev) => prev.map((ink) => (ink.id === inkId ? { ...ink, isPinned: false } : ink)))
-    toast({ title: "Unpinned 💨", description: "This ink is no longer highlighted on your profile." })
+  const handleLoadMoreClick = async (tab: string) => {
+    try {
+      trackApiCall()
+      await handleLoadMore(tab)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load more content. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
   }
 
-  /* -------------------------------------------------------------------------- */
-  /*                                   Render                                   */
-  /* -------------------------------------------------------------------------- */
+  const handlePinInkClick = async (inkId: number) => {
+    try {
+      await handlePinInk(inkId)
+      
+      toast({
+        title: "Ink Pinned",
+        description: "Ink has been pinned to your profile.",
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        title: "Pin Failed",
+        description: "Failed to pin ink. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }
 
+  const handleUnpinInkClick = async (inkId: number) => {
+    try {
+      await handleUnpinInk(inkId)
+      
+      toast({
+        title: "Ink Unpinned",
+        description: "Ink has been unpinned from your profile.",
+        duration: 3000,
+      })
+    } catch (error) {
+      toast({
+        title: "Unpin Failed",
+        description: "Failed to unpin ink. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    }
+  }
+
+  const handleViewAllAchievements = () => {
+    setAchievementsModalOpen(true)
+  }
+
+  const handleViewFollowers = () => {
+    setFollowersModalOpen(true)
+  }
+
+  const handleViewFollowing = () => {
+    setFollowingModalOpen(true)
+  }
+
+  /* ----------------------------- Error Handling ----------------------------- */
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+        duration: 5000,
+      })
+      clearError()
+    }
+  }, [error, toast, clearError])
+
+  /* ----------------------------- Performance Warnings ----------------------------- */
+  useEffect(() => {
+    if (isMemoryWarning) {
+      toast({
+        title: "Performance Warning",
+        description: "High memory usage detected. Consider refreshing the page.",
+        variant: "destructive",
+        duration: 8000,
+      })
+    }
+  }, [isMemoryWarning, toast])
+
+  /* ----------------------------- Loading States ----------------------------- */
+  // Show full page loader while data is loading or user is not authenticated
+  if (isLoading && !userData || !user) {
+    return <FullPageLoader />
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return <ErrorState error={error} onRetry={clearError} />
+  }
+
+  /* ----------------------------- Render ----------------------------- */
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Header />
-
-      <div className="flex">
-        <div className="hidden md:block">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Top Navbar */}
+      <Header aria-label="Main navigation bar" />
+      
+      <div className="flex flex-1 w-full max-w-full">
+        {/* Side Navigation (desktop) */}
+        <nav className="hidden md:block w-max flex-shrink-0" aria-label="Sidebar navigation" role="navigation">
           <SideNav />
-        </div>
+        </nav>
+        
+        {/* Main Content */}
+        <main className="flex-1 w-full" aria-label="Profile page main content">
+          {/* Performance Monitor (dev only) */}
+          {showPerformanceMonitor && (
+            <PerformanceMonitor 
+              cardCount={createdInks.length + reflectedInks.length + bookmarkedInks.length}
+              isVisible={showPerformanceMonitor}
+            />
+          )}
 
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
-          <div className="max-w-7xl mx-auto">
-            {/* ------------------------------------------------------------------ */}
-            {/*                          USER IDENTITY PANEL                        */}
-            {/* ------------------------------------------------------------------ */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-              <UserIdentityPanel
-                userData={userData}
-                isOwnProfile={isOwnProfile}
-                isFollowing={isFollowing}
-                isFollowLoading={isFollowLoading}
-                followIntent={followIntent}
-                onFollow={handleFollow}
-                onProfileUpdate={handleProfileUpdate}
-                /* NEW: open the modals */
-                onFollowersClick={() => setFollowersModalOpen(true)}
-                onFollowingClick={() => setFollowingModalOpen(true)}
-              />
-            </motion.div>
+          {/* Profile Content */}
+          <div className="px-0 md:px-5 py-4 md:py-10 text-xs md:text-sm">
+            <div className="max-w-7xl mx-auto">
+              {/* Network Warning */}
+              <NetworkWarning variant="banner" />
+                             {/* User Identity Panel */}
+               {userData && (
+                 <UserIdentityPanel
+                   userData={userData}
+                   isFollowing={isFollowing}
+                   isOwnProfile={isOwnProfile}
+                   isFollowLoading={isFollowLoading}
+                   followIntent={followIntent}
+                   onFollow={handleFollowClick}
+                   onProfileUpdate={handleProfileUpdate}
+                   onFollowersClick={handleViewFollowers}
+                   onFollowingClick={handleViewFollowing}
+                 />
+               )}
 
-            {/* --------------------------- PINNED INKS --------------------------- */}
-            {isOwnProfile && (
-              <PinnedInksSection
-                pinnedInks={pinnedInks}
-                isOwnProfile={isOwnProfile}
-                onUnpinInk={handleUnpinInk}
-                onSavePins={(newPinIds) => {
-                  setCreatedInks((prev) =>
-                    prev.map((ink) => ({
-                      ...ink,
-                      isPinned: newPinIds.includes(ink.id),
-                    }))
-                  )
-                  setPinnedInks(() => {
-                    // Reorder pinnedInks to match newPinIds order
-                    const newOrder = newPinIds
-                      .map(id => createdInks.find(ink => ink.id === id))
-                      .filter((ink): ink is typeof createdInks[number] => Boolean(ink))
-                    return newOrder
-                  })
-                  toast({ title: "Pins updated successfully", description: "Your spotlight inks have been updated." })
-                }}
-              />
-            )}
-
-            {/* ---------------------- GRID (sidebar + content) ------------------- */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              {/* Progress & Achievements Sidebar */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-                className="lg:col-span-1"
-              >
-                <div className="sticky top-24">
-                  <ProgressAchievementsSidebar
-                    userData={userData}
-                    achievements={mockAchievements}
-                    onViewAllAchievements={() => setAchievementsModalOpen(true)}
-                  />
-                </div>
-              </motion.div>
-
-              {/* Main Content Area */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="lg:col-span-3"
-              >
-                <ContentTabs
-                  createdInks={createdInks}
-                  reflectedInks={reflectedInks}
-                  bookmarkedInks={bookmarkedInks}
+              {/* Pinned Inks Section */}
+              {pinnedInks.length > 0 && (
+                <PinnedInksSection
                   pinnedInks={pinnedInks}
                   isOwnProfile={isOwnProfile}
-                  onLoadMore={handleLoadMore}
-                  hasMore={hasMore}
-                  loading={loading}
-                  onPinInk={handlePinInk}
+                  onUnpinInk={handleUnpinInkClick}
                 />
-              </motion.div>
+              )}
+
+                             {/* Content Tabs */}
+               <ContentTabs
+                 createdInks={createdInks}
+                 reflectedInks={reflectedInks}
+                 bookmarkedInks={bookmarkedInks}
+                 pinnedInks={pinnedInks}
+                 hasMore={hasMore}
+                 loading={isLoading}
+                 onLoadMore={handleLoadMoreClick}
+                 onPinInk={handlePinInkClick}
+                 isOwnProfile={isOwnProfile}
+               />
             </div>
           </div>
         </main>
       </div>
-
-      {/* Bottom navigation for mobile */}
-      <div className="md:hidden">
+      
+      {/* Bottom Navigation (always visible) */}
+      <nav className="block sticky bottom-0 z-50" aria-label="Bottom navigation" role="navigation">
         <BottomNav />
-      </div>
+      </nav>
+      
       <Footer />
 
-      {/* ------------------------------ MODALS ------------------------------ */}
-      <AchievementsModal
-        isOpen={achievementsModalOpen}
-        onClose={() => setAchievementsModalOpen(false)}
-        badges={mockAchievements}
-      />
-
-      <FollowersModal
-        isOpen={followersModalOpen}
-        onClose={() => setFollowersModalOpen(false)}
-        totalCount={userData.stats.followers}
-        userName={userData.name}
-        // followers={[]}
-      />
-
-      <FollowingModal
-        isOpen={followingModalOpen}
-        onClose={() => setFollowingModalOpen(false)}
-        totalCount={userData.stats.following}
-        userName={userData.name}
-        // following={[]}
-      />
+             {/* Modals */}
+       <AchievementsModal
+         isOpen={achievementsModalOpen}
+         onClose={() => setAchievementsModalOpen(false)}
+         badges={achievements}
+       />
+       
+       <FollowersModal
+         isOpen={followersModalOpen}
+         onClose={() => setFollowersModalOpen(false)}
+         followers={followers}
+       />
+       
+       <FollowingModal
+         isOpen={followingModalOpen}
+         onClose={() => setFollowingModalOpen(false)}
+         following={following}
+       />
     </div>
   )
 }

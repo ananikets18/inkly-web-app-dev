@@ -502,7 +502,7 @@ export default function InksOverview() {
                 Your Inks
               </h1>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-medium">
-                {inks.length} published • Track performance and engagement
+                {inks.length} published • {inks.reduce((total, ink) => total + ink.wordCount, 0).toLocaleString()} total words • Track performance and engagement
               </p>
             </div>
 

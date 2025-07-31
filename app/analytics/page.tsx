@@ -1,32 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { BarChart3, Sparkles } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { BarChart3, Sparkles, Loader2, RefreshCw } from "lucide-react"
 import Header from "@/components/Header"
 import SideNav from "@/components/SideNav"
 import BottomNav from "@/components/BottomNav"
 import EchoSummary from "@/components/analytics/EchoSummary"
 import XPBadgeProgress from "@/components/analytics/XPBadgeProgress"
-import SentimentTimeline from "@/components/analytics/SentimentTimeline"
-import InkMilestones from "@/components/analytics/InkMilestones"
 import TopInks from "@/components/analytics/TopInks"
-import AudienceSnapshot from "@/components/analytics/AudienceSnapshot"
-import ReflectionSpread from "@/components/analytics/ReflectionSpread"
-import XPOverTime from "@/components/analytics/XPOverTime"
 import StreakTracker from "@/components/analytics/StreakTracker"
 import TotalInksPosted from "@/components/analytics/TotalInksPosted"
-import AvgWordCount from "@/components/analytics/AvgWordCount"
-import ExplorerPath from "@/components/analytics/ExplorerPath"
+import ViewsImpressions from "@/components/analytics/ViewsImpressions"
+import EngagementRate from "@/components/analytics/EngagementRate"
+import BestTimeToPost from "@/components/analytics/BestTimeToPost"
+import GrowthRate from "@/components/analytics/GrowthRate"
 import Footer from "@/components/Footer"
+import { useUserAnalytics, AnalyticsAPIError } from "@/lib/api/analytics"
+import { useToast } from "@/hooks/use-toast"
+import { NetworkWarning } from "@/components/NetworkWarning"
+// Authentication removed - using mock authentication
 
 const TABS = [
-  { label: "Overview", value: "overview", desc: "Echo summary and XP progress" },
-  { label: "Sentiment", value: "sentiment", desc: "Emotional sentiment timeline" },
-  { label: "Journey", value: "journey", desc: "Ink journey milestones" },
-  { label: "Top Inks", value: "topinks", desc: "Top performing inks" },
-  { label: "Audience", value: "audience", desc: "Audience insights" },
-  { label: "Reflections", value: "reflections", desc: "Reflection chains" },
+  { label: "Overview", value: "overview", desc: "Core metrics and progress" },
+  { label: "Performance", value: "performance", desc: "What works best" },
+  { label: "Engagement", value: "engagement", desc: "Community interaction" },
 ]
 
 // Mock user data
@@ -86,21 +84,127 @@ function getDynamicGreeting() {
   return messages[Math.floor(Math.random() * messages.length)]
 }
 
-function Skeleton({ className = "" }) {
-  return <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+// Full Page Loader Component
+function FullPageLoader() {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950 dark:via-background dark:to-orange-950"
+      >
+        <div className="text-center">
+          {/* Animated Logo/Icon */}
+          <motion.div
+            animate={{ 
+              rotate: 360,
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+              scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="mx-auto mb-8 w-20 h-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl"
+          >
+            <BarChart3 className="w-10 h-10 text-white" />
+          </motion.div>
+
+          {/* Loading Text */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-2xl font-bold text-gray-800 dark:text-white mb-4"
+          >
+            Loading Analytics
+          </motion.h2>
+
+          {/* Loading Description */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto"
+          >
+            Gathering your insights and performance data...
+          </motion.p>
+
+          {/* Animated Dots */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex justify-center space-x-2"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ 
+                  y: [0, -10, 0],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2
+                }}
+                className="w-3 h-3 bg-purple-500 rounded-full"
+              />
+            ))}
+          </motion.div>
+
+          {/* Progress Bar */}
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="mt-8 w-64 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-purple-500 to-orange-500"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  )
 }
 
-function timeAgo(date: Date): string {
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  if (seconds < 5) return "just now"
-  if (seconds < 60) return `${seconds} seconds ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`
-  const days = Math.floor(hours / 24)
-  return `${days} day${days > 1 ? "s" : ""} ago`
+// Error State Component
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950 dark:via-background dark:to-red-950">
+      <div className="text-center max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="mx-auto mb-6 w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+        >
+          <BarChart3 className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          Analytics Unavailable
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {error}
+        </p>
+        
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // Hero Section Component
@@ -165,20 +269,43 @@ function AnalyticsHeroSection() {
   )
 }
 
+import AuthGuard from "@/components/AuthGuard"
+
 export default function AnalyticsDashboard() {
+  return (
+    <AuthGuard>
+      <AnalyticsDashboardContent />
+    </AuthGuard>
+  )
+}
+
+function AnalyticsDashboardContent() {
   const [tab, setTab] = useState("overview")
   const [greeting, setGreeting] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<UserProfile | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [now, setNow] = useState<Date>(new Date())
+  const timeRange = "7d"
+
+  // Get current user ID from auth context
+  // Mock user for demo
+  const user = {
+    id: "demo-user-id",
+    fullName: "Demo User",
+    username: "demo_user",
+    email: "demo@example.com"
+  }
+  const userId = user?.id || "current-user-id"
+
+  // Analytics data hook
+  const { data, refetch, clearCache } = useUserAnalytics(userId, timeRange)
+  const { toast } = useToast()
 
   useEffect(() => {
     setGreeting(getDynamicGreeting())
     // Simulate loading user/profile data
     setTimeout(() => {
-      setUser(mockUser)
-      setLoading(false)
+      setUserProfile(mockUser)
       setLastUpdated(new Date())
     }, 1200)
   }, [])
@@ -188,6 +315,22 @@ export default function AnalyticsDashboard() {
     const interval = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // Handle retry
+  const handleRetry = () => {
+    clearCache()
+    refetch()
+  }
+
+  // Show full page loader while data is loading
+  if (data.isLoading) {
+    return <FullPageLoader />
+  }
+
+  // Show error state if there's an error
+  if (data.error) {
+    return <ErrorState error={data.error} onRetry={handleRetry} />
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -206,6 +349,26 @@ export default function AnalyticsDashboard() {
           {/* Dashboard Content */}
           <div className="px-0 md:px-5 py-4 md:py-10 text-xs md:text-sm">
             <div className="max-w-7xl mx-auto">
+              {/* Network Warning */}
+              <NetworkWarning variant="banner" />
+              
+              {/* Last Updated Info */}
+              <div className="flex items-center justify-between mb-6 px-3 md:px-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Last 7 days</span>
+                  <button
+                    onClick={handleRetry}
+                    className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                    title="Refresh data"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Last updated: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'Never'}
+                </div>
+              </div>
+
               {/* Tabs */}
               <nav
                 className="mb-6 flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide px-3 md:px-0"
@@ -221,7 +384,6 @@ export default function AnalyticsDashboard() {
                         ? "bg-purple-600 text-white shadow-md"
                         : "bg-card text-muted-foreground hover:bg-muted"
                     }`}
-                    disabled={loading}
                     aria-label={t.label}
                     aria-selected={tab === t.value}
                     aria-controls={`tabpanel-${t.value}`}
@@ -234,93 +396,62 @@ export default function AnalyticsDashboard() {
                 ))}
               </nav>
 
-              {/* Tab Content Skeleton Loader */}
-              {loading ? (
-                <div className="space-y-6 md:space-y-8 px-3 md:px-0">
-                  <Skeleton className="w-full h-32 rounded-2xl" />
-                  <Skeleton className="w-full h-32 rounded-2xl" />
-                  <Skeleton className="w-full h-32 rounded-2xl" />
-                </div>
-              ) : (
-                <div className="space-y-6 md:space-y-8 px-3 md:px-0">
-                  {tab === "overview" && (
-                    <section id="tabpanel-overview" role="tabpanel" aria-labelledby="overview" tabIndex={0}>
-                      {/* New Analytics Components */}
-                      <div className="space-y-6 md:space-y-8 mb-8">
-                        {/* XP and Streak Row */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="rounded-2xl bg-card p-4 md:p-6">
-                            <XPOverTime />
-                          </div>
-                          <div className="rounded-2xl bg-card p-4 md:p-6">
-                            <StreakTracker />
-                          </div>
-                        </div>
+              {/* Tab Content */}
+              <div className="space-y-6 md:space-y-8 px-3 md:px-0">
+                {tab === "overview" && (
+                  <section id="tabpanel-overview" role="tabpanel" aria-labelledby="overview" tabIndex={0}>
+                    {/* Core Metrics Grid */}
+                    <div className="grid md:grid-cols-2 gap-6 mb-8">
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <TotalInksPosted />
+                      </div>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <ViewsImpressions />
+                      </div>
+                    </div>
 
-                        {/* Stats Row */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <div className="rounded-2xl bg-card p-4 md:p-6">
-                            <TotalInksPosted />
-                          </div>
-                          <div className="rounded-2xl bg-card p-4 md:p-6">
-                            <AvgWordCount />
-                          </div>
-                        </div>
+                    {/* Engagement and Progress */}
+                    <div className="grid md:grid-cols-2 gap-6 mb-8">
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <EngagementRate />
+                      </div>
+                      <div className="rounded-2xl bg-card p-4 md:p-6">
+                        <StreakTracker />
+                      </div>
+                    </div>
 
-                        {/* Explorer Path */}
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <ExplorerPath />
-                        </div>
-                      </div>
+                    {/* XP Progress */}
+                    <div className="rounded-2xl bg-card p-4 md:p-6">
+                      <XPBadgeProgress />
+                    </div>
+                  </section>
+                )}
+                {tab === "performance" && (
+                  <section id="tabpanel-performance" role="tabpanel" aria-labelledby="performance" tabIndex={0}>
+                    {/* Top Performing Content */}
+                    <div className="rounded-2xl bg-card p-4 md:p-6 mb-8">
+                      <TopInks />
+                    </div>
 
-                      {/* Existing Components */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <EchoSummary />
-                        </div>
-                        <div className="rounded-2xl bg-card p-4 md:p-6">
-                          <XPBadgeProgress />
-                        </div>
-                      </div>
-                    </section>
-                  )}
-                  {tab === "sentiment" && (
-                    <section id="tabpanel-sentiment" role="tabpanel" aria-labelledby="sentiment" tabIndex={0}>
+                    {/* Performance Insights */}
+                    <div className="grid md:grid-cols-2 gap-6">
                       <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <SentimentTimeline />
+                        <BestTimeToPost />
                       </div>
-                    </section>
-                  )}
-                  {tab === "journey" && (
-                    <section id="tabpanel-journey" role="tabpanel" aria-labelledby="journey" tabIndex={0}>
                       <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <InkMilestones />
+                        <GrowthRate />
                       </div>
-                    </section>
-                  )}
-                  {tab === "topinks" && (
-                    <section id="tabpanel-topinks" role="tabpanel" aria-labelledby="topinks" tabIndex={0}>
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <TopInks />
-                      </div>
-                    </section>
-                  )}
-                  {tab === "audience" && (
-                    <section id="tabpanel-audience" role="tabpanel" aria-labelledby="audience" tabIndex={0}>
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <AudienceSnapshot />
-                      </div>
-                    </section>
-                  )}
-                  {tab === "reflections" && (
-                    <section id="tabpanel-reflections" role="tabpanel" aria-labelledby="reflections" tabIndex={0}>
-                      <div className="rounded-2xl bg-card p-4 md:p-6">
-                        <ReflectionSpread />
-                      </div>
-                    </section>
-                  )}
-                </div>
-              )}
+                    </div>
+                  </section>
+                )}
+                {tab === "engagement" && (
+                  <section id="tabpanel-engagement" role="tabpanel" aria-labelledby="engagement" tabIndex={0}>
+                    <div className="rounded-2xl bg-card p-4 md:p-6">
+                      <EchoSummary />
+                    </div>
+                  </section>
+                )}
+              </div>
             </div>
           </div>
         </main>

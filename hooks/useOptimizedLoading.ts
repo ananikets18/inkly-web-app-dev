@@ -8,12 +8,12 @@ interface UseOptimizedLoadingOptions {
 }
 
 export function useOptimizedLoading({
-  batchSize = 4,
-  batchDelay = 50,
-  maxItems = 80,
-  threshold = 300
+  batchSize = 2, // Reduced from 4 to 2
+  batchDelay = 100, // Increased from 50 to 100ms
+  maxItems = 40, // Reduced from 80 to 40
+  threshold = 500 // Increased from 300 to 500
 }: UseOptimizedLoadingOptions = {}) {
-  const [visibleCount, setVisibleCount] = useState(8);
+  const [visibleCount, setVisibleCount] = useState(4); // Reduced from 8 to 4
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadingRef = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);

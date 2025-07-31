@@ -6,11 +6,13 @@ import { Home, Search, Plus, Settings, PenTool } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
+import { useAuth } from "@/context/AuthContext"
 
 export default function BottomNav() {
   const router = useRouter()
   const pathname = usePathname()
   const { playSound } = useSoundEffects()
+  const { isAuthenticated, user } = useAuth()
 
   // Smart show/hide on scroll
   const [visible, setVisible] = useState(true)
@@ -32,7 +34,15 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  const navItems = [
+  const navItems: Array<{
+    icon: React.ComponentType<any>
+    label: string
+    id: string
+    href: string
+    ariaLabel: string
+    isSpecial?: boolean
+    requiresAuth?: boolean
+  }> = [
     {
       icon: Home,
       label: "Home",
@@ -54,6 +64,7 @@ export default function BottomNav() {
       href: "/create",
       ariaLabel: "Create new ink post",
       isSpecial: true,
+      requiresAuth: true,
     },
     {
       icon: PenTool,
@@ -61,6 +72,7 @@ export default function BottomNav() {
       id: "studio",
       href: "/studio",
       ariaLabel: "Access Inkly Studio creator dashboard",
+      requiresAuth: true,
     },
     {
       icon: Settings,
@@ -68,6 +80,7 @@ export default function BottomNav() {
       id: "settings",
       href: "/settings",
       ariaLabel: "Access app settings",
+      requiresAuth: true,
     },
   ]
 
@@ -114,7 +127,9 @@ export default function BottomNav() {
       role="navigation"
       aria-label="Main navigation"
     >
-      {navItems.map(({ icon: Icon, label, id, ariaLabel, isSpecial, ...item }) => (
+      {navItems
+        .filter(item => !item.requiresAuth || isAuthenticated)
+        .map(({ icon: Icon, label, id, ariaLabel, isSpecial, ...item }) => (
         <button
           key={id}
           aria-label={ariaLabel}

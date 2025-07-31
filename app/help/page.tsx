@@ -27,6 +27,7 @@ import BottomNav from "@/components/BottomNav"
 import SideNav from "@/components/SideNav"
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
+import { NetworkWarning } from "@/components/NetworkWarning"
 
 const faqCategories = [
   {
@@ -200,6 +201,9 @@ export default function HelpPage() {
           icon={HelpCircle}
         />
 
+        {/* Network Warning */}
+        <NetworkWarning variant="banner" />
+        
         {/* Search Section */}
         <section className="py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900/50 w-full">
           <div className="max-w-4xl mx-auto">

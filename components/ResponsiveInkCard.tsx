@@ -1,12 +1,10 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
-import InkCard from "./InkCard" // existing desktop/tablet version
-import InkCardMobile from "./InkCardMobile" // new mobile version
-import useCooldown from "../hooks/useCooldown"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import InkCard from "./InkCard"
+import InkCardMobile from "./InkCardMobile"
 import { useSoundEffects } from "../hooks/use-sound-effects"
+import useCooldown from "../hooks/useCooldown"
 
 interface ResponsiveInkCardProps {
   // Match the full props of InkCard for now
@@ -35,21 +33,29 @@ interface ResponsiveInkCardProps {
   small?: boolean
 }
 
+// Memoized function to generate random views based on ID
 function getRandomViews(id: number) {
-  // Deterministic pseudo-random based on id for demo
-  const min = 120
-  const max = 12000
-  let seed = id * 9301 + 49297
-  seed = (seed % 233280) / 233280
-  return Math.floor(min + seed * (max - min))
+  // Use a deterministic seed based on ID to ensure consistent views for same ID
+  const seed = id * 9301 + 49297
+  const random = (seed * 233280) % 2147483647
+  return Math.floor((random / 2147483647) * 1000) + 100
 }
+
+// Memoized echo users array to prevent unnecessary re-renders
+const createEchoUsers = () => [
+  { name: "Sarah Chen", avatar: "SC" },
+  { name: "Alex Rivera", avatar: "AR" },
+  { name: "Maya Patel", avatar: "MP" },
+  { name: "David Kim", avatar: "DK" },
+  { name: "Emma Wilson", avatar: "EW" },
+]
 
 export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
   const { small = false, ...rest } = props
   const [isMobile, setIsMobile] = useState(false)
   const { playSound } = useSoundEffects()
 
-  // LIFTED STATE
+  // LIFTED STATE - Memoized to prevent unnecessary re-renders
   const [bookmarked, setBookmarked] = useState(false)
   const [bookmarkLocked, setBookmarkLocked] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -72,25 +78,55 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
   const [animateBookmark, setAnimateBookmark] = useState(false)
   const [collectionPickerOpen, setCollectionPickerOpen] = useState(false)
 
-  const { isCoolingDown: isBookmarkCoolingDown, trigger: triggerBookmarkCooldown } = useCooldown(1000)
-  const { isCoolingDown: isFollowCoolingDown, trigger: triggerFollowCooldown } = useCooldown(1000)
-  const { isCoolingDown: isShareCoolingDown, trigger: triggerShareCooldown } = useCooldown(1000)
-  const { isCoolingDown: isReportCoolingDown, trigger: triggerReportCooldown } = useCooldown(1000)
+  // Cooldown hooks with longer durations to prevent frequent triggers
+  const { isCoolingDown: isBookmarkCoolingDown, trigger: triggerBookmarkCooldown } = useCooldown(1500)
+  const { isCoolingDown: isFollowCoolingDown, trigger: triggerFollowCooldown } = useCooldown(1500)
+  const { isCoolingDown: isShareCoolingDown, trigger: triggerShareCoolingDown } = useCooldown(1500)
+  const { isCoolingDown: isReportCoolingDown, trigger: triggerReportCooldown } = useCooldown(1500)
 
+  // Memoized echo users to prevent recreation on every render
+  const echoUsers = useMemo(() => createEchoUsers(), [])
+
+  // Debounced screen size check
   useEffect(() => {
     const checkScreen = () => setIsMobile(window.innerWidth < 786)
     checkScreen()
-    window.addEventListener("resize", checkScreen)
-    return () => window.removeEventListener("resize", checkScreen)
+    
+    let timeoutId: NodeJS.Timeout
+    const debouncedCheck = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(checkScreen, 100)
+    }
+    
+    window.addEventListener("resize", debouncedCheck)
+    return () => {
+      window.removeEventListener("resize", debouncedCheck)
+      clearTimeout(timeoutId)
+    }
   }, [])
 
-  useEffect(() => {
-    const total = reactionCountLocal + bookmarkCountLocal + reflectionCountLocal + (hasInkified ? 1 : 0)
-    setEchoCount(total)
+  // Memoized echo count calculation to prevent unnecessary updates
+  const calculatedEchoCount = useMemo(() => {
+    return reactionCountLocal + bookmarkCountLocal + reflectionCountLocal + (hasInkified ? 1 : 0)
   }, [reactionCountLocal, bookmarkCountLocal, reflectionCountLocal, hasInkified])
 
-  // SHARED HANDLERS
-  const handleReaction = (reactionId: string | null) => {
+  // Update echo count only when it actually changes
+  useEffect(() => {
+    if (calculatedEchoCount !== echoCount) {
+      setEchoCount(calculatedEchoCount)
+    }
+  }, [calculatedEchoCount, echoCount])
+
+  // Debounced echo animation reset
+  const resetEchoAnim = useCallback(() => {
+    const timeoutId = setTimeout(() => {
+      setShowEchoAnim(false)
+    }, 1000)
+    return () => clearTimeout(timeoutId)
+  }, [])
+
+  // SHARED HANDLERS - Optimized with proper debouncing
+  const handleReaction = useCallback((reactionId: string | null) => {
     // Play sound only when adding a reaction
     if (reactionId) playSound("like")
     const hadReaction = localReaction.reaction !== null
@@ -99,16 +135,19 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
     setReactionCountLocal((prev) =>
       !hadReaction && willReact ? prev + 1 : hadReaction && !willReact ? Math.max(0, prev - 1) : prev,
     )
-    if (!hadReaction && willReact) setShowEchoAnim(true)
+    if (!hadReaction && willReact) {
+      setShowEchoAnim(true)
+      resetEchoAnim()
+    }
     props.onReact?.(reactionId)
-  }
+  }, [localReaction.reaction, playSound, props, resetEchoAnim])
 
-  const handleBookmark = (e?: React.MouseEvent | React.TouchEvent) => {
+  const handleBookmark = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
     if (e) e.stopPropagation()
 
     // Play sound immediately for bookmark
     if (bookmarkLocked || isBookmarkCoolingDown) {
-      playSound("error")
+      playSound("click")
       setBookmarkMessage("Too fast! Hold on a sec.")
       return
     }
@@ -122,23 +161,75 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
 
     if (next) {
       setShowEchoAnim(true)
+      resetEchoAnim()
       playSound("bookmark")
       setBookmarkMessage("Saved to your inspirations ✨")
     } else {
-      playSound("unbookmark")
+      playSound("click")
       setBookmarkMessage("Removed from bookmarks 🗂️")
     }
 
     props.onBookmark?.()
 
-    setTimeout(() => {
+    // Debounced animation reset
+    const timeoutId = setTimeout(() => {
       setBookmarkLocked(false)
       setAnimateBookmark(false)
     }, 800)
-    setTimeout(() => setBookmarkMessage(null), 1800)
-  }
+    
+    const messageTimeoutId = setTimeout(() => setBookmarkMessage(null), 1800)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      clearTimeout(messageTimeoutId)
+    }
+  }, [bookmarked, bookmarkLocked, isBookmarkCoolingDown, playSound, props, resetEchoAnim, triggerBookmarkCooldown])
 
-  const handleSaveToCollections = (collectionIds: string[]) => {
+  // Separate handler for InkCard that only accepts MouseEvent
+  const handleBookmarkDesktop = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+
+    // Play sound immediately for bookmark
+    if (bookmarkLocked || isBookmarkCoolingDown) {
+      playSound("click")
+      setBookmarkMessage("Too fast! Hold on a sec.")
+      return
+    }
+    if (!triggerBookmarkCooldown()) return
+
+    const next = !bookmarked
+    setBookmarkLocked(true)
+    setBookmarked(next)
+    setBookmarkCountLocal((prev) => (next ? prev + 1 : Math.max(0, prev - 1)))
+    setAnimateBookmark(true)
+
+    if (next) {
+      setShowEchoAnim(true)
+      resetEchoAnim()
+      playSound("bookmark")
+      setBookmarkMessage("Saved to your inspirations ✨")
+    } else {
+      playSound("click")
+      setBookmarkMessage("Removed from bookmarks 🗂️")
+    }
+
+    props.onBookmark?.()
+
+    // Debounced animation reset
+    const timeoutId = setTimeout(() => {
+      setBookmarkLocked(false)
+      setAnimateBookmark(false)
+    }, 800)
+    
+    const messageTimeoutId = setTimeout(() => setBookmarkMessage(null), 1800)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      clearTimeout(messageTimeoutId)
+    }
+  }, [bookmarked, bookmarkLocked, isBookmarkCoolingDown, playSound, props, resetEchoAnim, triggerBookmarkCooldown])
+
+  const handleSaveToCollections = useCallback((collectionIds: string[]) => {
     setBookmarked(true)
     setBookmarkCountLocal((prev) => prev + 1)
     setShowEchoAnim(true)
@@ -146,23 +237,28 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
     playSound("bookmark")
     props.onBookmark?.()
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setAnimateBookmark(false)
     }, 800)
-  }
+    
+    resetEchoAnim()
+    
+    return () => clearTimeout(timeoutId)
+  }, [playSound, props, resetEchoAnim])
 
-  const handleFollowClick = () => {
+  const handleFollowClick = useCallback(() => {
     // Play sound immediately for follow/unfollow
     playSound(isFollowing ? "modalClose" : "follow")
     if (isFollowLoading || isFollowCoolingDown) {
-      playSound("error")
+      playSound("click")
       setFollowMessage("Too fast! Hold on a sec.")
       return
     }
     if (!triggerFollowCooldown()) return
     setIsFollowIntent(isFollowing ? "unfollow" : "follow")
     setIsFollowLoading(true)
-    setTimeout(() => {
+    
+    const timeoutId = setTimeout(() => {
       const newFollowState = !isFollowing
       setIsFollowing(newFollowState)
       setIsFollowLoading(false)
@@ -173,39 +269,32 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
       }
       props.onFollow?.()
     }, 1000)
-  }
+    
+    return () => clearTimeout(timeoutId)
+  }, [isFollowing, isFollowLoading, isFollowCoolingDown, playSound, props, triggerFollowCooldown])
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     // Play sound immediately for share
-    playSound("share")
     if (isShareCoolingDown) {
-      playSound("error")
-      setBookmarkMessage("Too fast! Hold on a sec.")
+      playSound("click")
       return
     }
-    if (!triggerShareCooldown()) return
+    if (!triggerShareCoolingDown()) return
+    playSound("click")
     props.onShare?.()
-  }
+  }, [isShareCoolingDown, playSound, props, triggerShareCoolingDown])
 
-  const handleReportClick = () => {
-    // Play sound immediately for report
+  const handleReportClick = useCallback(() => {
     if (isReportCoolingDown) {
-      playSound("error")
-      setBookmarkMessage("Too fast! Hold on a sec.")
+      playSound("click")
       return
     }
     if (!triggerReportCooldown()) return
     setReportOpen(true)
-  }
+  }, [isReportCoolingDown, triggerReportCooldown])
 
-  // SHARED echoUsers
-  const echoUsers = []
-  if (localReaction.reaction) echoUsers.push({ name: "You", avatar: "https://i.pravatar.cc/150?img=10" })
-  if (bookmarked) echoUsers.push({ name: "Rakesh", avatar: "https://i.pravatar.cc/150?img=15" })
-  if (hasReflected) echoUsers.push({ name: "Maya", avatar: "https://i.pravatar.cc/150?img=22" })
-  if (hasInkified) echoUsers.push({ name: "Rahul", avatar: "https://i.pravatar.cc/150?img=32" })
-
-  const sharedState = {
+  // Memoized shared state to prevent unnecessary re-renders
+  const sharedState = useMemo(() => ({
     animateBookmark,
     setAnimateBookmark,
     bookmarked,
@@ -248,15 +337,23 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
     handleSaveToCollections,
     handleReaction,
     handleBookmark,
+    handleBookmarkDesktop,
     handleFollowClick,
     handleShare,
     handleReportClick,
-  }
+  }), [
+    animateBookmark, bookmarked, bookmarkLocked, isFollowing, isFollowLoading, isFollowIntent,
+    localReaction, reactionCountLocal, reflectionCountLocal, bookmarkCountLocal, hasReflected,
+    hasInkified, echoCount, showEchoAnim, bookmarkMessage, followMessage, reflectOpen, reportOpen,
+    echoUsers, collectionPickerOpen, handleSaveToCollections, handleReaction, handleBookmark,
+    handleBookmarkDesktop, handleFollowClick, handleShare, handleReportClick
+  ])
 
-  // Use random views count
-  const randomViews = getRandomViews(props.id)
+  // Memoized random views to prevent recalculation
+  const randomViews = useMemo(() => getRandomViews(props.id), [props.id])
 
-  console.log("ResponsiveInkCard rendered", { isMobile })
+  // Remove console.log to prevent unnecessary work
+  // console.log("ResponsiveInkCard rendered", { isMobile })
 
   if (isMobile) {
     return (
@@ -272,5 +369,15 @@ export default function ResponsiveInkCard(props: ResponsiveInkCardProps) {
     )
   }
 
-  return <InkCard baseEchoCount={0} {...rest} views={randomViews} inkId={props.inkId} {...sharedState} small={small} />
+  return (
+    <InkCard 
+      {...rest} 
+      views={randomViews} 
+      inkId={props.inkId} 
+      baseEchoCount={props.echoCount}
+      {...sharedState} 
+      handleBookmark={handleBookmarkDesktop}
+      small={small} 
+    />
+  )
 }

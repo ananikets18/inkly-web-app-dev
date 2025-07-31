@@ -1,265 +1,137 @@
-// Validation constants
-export const VALIDATION_LIMITS = {
-  MIN_CHARS: 15,
-  MAX_CHARS: 5000,
-  MAX_TAGS: 2,
-  MAX_EMOJI_PER_LINE: 5,
-  MAX_DUPLICATE_CHARS: 4,
-} as const
 
-// Content validation types
-export interface ValidationResult {
-  isValid: boolean
-  errors: string[]
-  warnings: string[]
-  score: number
+// Dynamic Ink Validation System
+
+export type InkContentType =
+  | "dialogue"
+  | "list"
+  | "quote"
+  | "question"
+  | "affirmation"
+  | "observation"
+  | "inspirational"
+  | "reflective"
+  | "humorous"
+  | "story"
+  | "poetic"
+  | "philosophical"
+  | "informative"
+  | "rant"
+  | "short"
+  | "medium"
+  | "long"
+  | "unknown"
+
+export interface InkValidationResult {
+  errors: string[] // Hard blocks
+  warnings: string[] // Soft blocks (can submit, but discouraged)
+  nudges: string[] // Tips, suggestions
+  detectedType: InkContentType
 }
 
-export interface ContentWarning {
-  type: "mental_health" | "clickbait" | "ai_generated" | "spam"
-  message: string
-  severity: "low" | "medium" | "high"
-  resources?: string[]
+// --- 1. Content-Type Detection ---
+export function detectInkContentType(content: string): InkContentType {
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  if (lines.length === 1) {
+    if (/^(["“]).*(["”])$/.test(lines[0])) return "quote"
+    if (lines[0].endsWith("?")) return "question"
+    if (lines[0].length < 60) return "short"
+  }
+  if (lines.length > 1) {
+    if (lines.every((l) => /^[-•*\d+\.]/.test(l))) return "list"
+    if (lines.every((l) => /^[A-Z]:/.test(l))) return "dialogue"
+    if (lines.length > 5 && content.length > 500) return "long"
+    if (lines.length > 2 && content.length > 200) return "medium"
+  }
+  // Add more heuristics as needed
+  return "unknown"
 }
 
-// Mental health keywords for soft warnings
-const MENTAL_HEALTH_KEYWORDS = [
-  "suicide",
-  "kill myself",
-  "end it all",
-  "panic attack",
-  "anxiety attack",
-  "depression",
-  "self harm",
-  "cutting",
-  "overdose",
-  "worthless",
-  "hopeless",
-]
-
-// Clickbait patterns
-const CLICKBAIT_PATTERNS = [
-  /you won't believe/i,
-  /shocking truth/i,
-  /doctors hate/i,
-  /this will blow your mind/i,
-  /number \d+ will shock you/i,
-  /what happens next/i,
-]
-
-// Text validation functions
-export function validateTextContent(text: string): ValidationResult {
-  const trimmed = text.trim()
+// --- 2. Validation Pipeline ---
+export function validateInkContent(content: string): InkValidationResult {
+  const type = detectInkContentType(content)
   const errors: string[] = []
   const warnings: string[] = []
-  let score = 100
+  const nudges: string[] = []
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
 
-  // Empty check
-  if (trimmed.length === 0) {
-    errors.push("Content cannot be empty")
-    return { isValid: false, errors, warnings, score: 0 }
+  // --- Hard validation (blocking) ---
+  if (!content.trim()) errors.push("Content cannot be empty.")
+  if (content.length > 5000) errors.push("Content exceeds maximum length.")
+  // Add profanity/hate/NSFW/violence checks here (call existing functions)
+
+  // --- Type-specific validation & nudges ---
+  switch (type) {
+    case "dialogue":
+      if (lines.length < 2) nudges.push("Tip: Dialogues are more engaging with at least two speakers.")
+      if (!lines.every((l) => /^[A-Z]:/.test(l))) nudges.push("Tip: Start each line with a speaker label (e.g., A: Hello).")
+      break
+    case "list":
+      if (lines.length < 2) nudges.push("Tip: Lists are more useful with at least two items.")
+      nudges.push("Tip: Use clear, concise items for better readability.")
+      break
+    case "quote":
+      nudges.push("Tip: Short, impactful quotes are memorable.")
+      nudges.push("Tip: Attribute famous quotes if possible.")
+      if (content.length > 200) warnings.push("Quotes are usually short and impactful.")
+      break
+    case "question":
+      nudges.push("Tip: Open-ended questions spark more engagement.")
+      nudges.push("Tip: Try to ask questions that invite reflection or discussion.")
+      if (!content.trim().endsWith("?")) warnings.push("Questions should end with a question mark.")
+      break
+    case "affirmation":
+      nudges.push("Tip: Positive affirmations can brighten someone’s day.")
+      nudges.push("Tip: Keep affirmations short and uplifting.")
+      break
+    case "observation":
+      nudges.push("Tip: Observations about daily life can inspire others.")
+      nudges.push("Tip: Add a personal touch to make your observation unique.")
+      break
+    case "inspirational":
+      nudges.push("Tip: Motivational inks can encourage your readers.")
+      nudges.push("Tip: Share a personal story for greater impact.")
+      break
+    case "reflective":
+      nudges.push("Tip: Reflective inks are great for self-discovery.")
+      nudges.push("Tip: Don’t be afraid to be vulnerable—your story matters.")
+      break
+    case "humorous":
+      nudges.push("Tip: Humor is a great way to connect—keep it light and fun.")
+      nudges.push("Tip: Sarcasm can be tricky online; make sure your intent is clear.")
+      break
+    case "story":
+      nudges.push("Tip: Short anecdotes can be powerful and relatable.")
+      nudges.push("Tip: Use vivid details to bring your story to life.")
+      break
+    case "poetic":
+      nudges.push("Tip: Poetry can be any style—haiku, rhyme, or free verse.")
+      nudges.push("Tip: Experiment with structure and imagery.")
+      break
+    case "philosophical":
+      nudges.push("Tip: Thought-provoking questions invite deep discussion.")
+      nudges.push("Tip: Share your unique perspective on life’s big questions.")
+      break
+    case "informative":
+      nudges.push("Tip: Quick tips and facts are helpful—keep them concise.")
+      nudges.push("Tip: Cite sources if sharing important information.")
+      break
+    case "rant":
+      nudges.push("Tip: Express your feelings, but keep it respectful.")
+      nudges.push("Tip: Constructive rants can spark positive change.")
+      break
+    case "short":
+      nudges.push("Tip: Short inks can be powerful. Consider expanding for more depth.")
+      break
+    case "medium":
+      nudges.push("Tip: Medium-length inks are great for reflection.")
+      break
+    case "long":
+      nudges.push("Tip: Long inks allow for deep exploration. Consider breaking up long paragraphs for readability.")
+      break
+    default:
+      nudges.push("Tip: Share your unique perspective!")
   }
 
-  // Length validation
-  if (trimmed.length < VALIDATION_LIMITS.MIN_CHARS) {
-    errors.push(`Content must be at least ${VALIDATION_LIMITS.MIN_CHARS} characters`)
-    score -= 30
-  }
-
-  if (trimmed.length > VALIDATION_LIMITS.MAX_CHARS) {
-    errors.push(`Content must be less than ${VALIDATION_LIMITS.MAX_CHARS} characters`)
-    score -= 50
-  }
-
-  // Only emojis or punctuation check
-  if (isOnlyEmojisOrPunctuation(trimmed)) {
-    errors.push("Content cannot be only emojis or punctuation")
-    score -= 40
-  }
-
-  // Duplicate characters check
-  if (hasExcessiveDuplicateChars(trimmed)) {
-    warnings.push("Avoid excessive repeated characters")
-    score -= 10
-  }
-
-  // Emoji spam check
-  if (hasEmojiSpam(trimmed)) {
-    warnings.push("Consider reducing emoji usage for better readability")
-    score -= 15
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-    score: Math.max(0, score),
-  }
-}
-
-export function validateTags(tags: string[]): ValidationResult {
-  const errors: string[] = []
-  const warnings: string[] = []
-  let score = 100
-
-  // Max tags check
-  if (tags.length > VALIDATION_LIMITS.MAX_TAGS) {
-    errors.push(`Maximum ${VALIDATION_LIMITS.MAX_TAGS} tags allowed`)
-    score -= 30
-  }
-
-  // Duplicate tags check
-  const uniqueTags = new Set(tags.map((tag) => tag.toLowerCase()))
-  if (uniqueTags.size !== tags.length) {
-    warnings.push("Duplicate tags detected")
-    score -= 10
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings,
-    score: Math.max(0, score),
-  }
-}
-
-export function cleanTags(tags: string[]): string[] {
-  return tags
-    .map((tag) => tag.replace(/^#+/, "").trim().toLowerCase())
-    .filter((tag) => tag.length > 0)
-    .slice(0, VALIDATION_LIMITS.MAX_TAGS)
-}
-
-export function detectContentWarnings(text: string): ContentWarning[] {
-  const warnings: ContentWarning[] = []
-
-  // Mental health warning
-  const hasMentalHealthKeywords = MENTAL_HEALTH_KEYWORDS.some((keyword) => text.toLowerCase().includes(keyword))
-
-  if (hasMentalHealthKeywords) {
-    warnings.push({
-      type: "mental_health",
-      message: "This content mentions mental health topics. Please consider your wellbeing and that of others.",
-      severity: "high",
-      resources: [
-        "National Suicide Prevention Lifeline: 988",
-        "Crisis Text Line: Text HOME to 741741",
-        "International Association for Suicide Prevention: https://www.iasp.info/resources/Crisis_Centres/",
-      ],
-    })
-  }
-
-  // Clickbait detection
-  const hasClickbait = CLICKBAIT_PATTERNS.some((pattern) => pattern.test(text))
-  if (hasClickbait) {
-    warnings.push({
-      type: "clickbait",
-      message: "This content may contain clickbait patterns. Consider a more authentic approach.",
-      severity: "medium",
-    })
-  }
-
-  // AI-generated content detection (basic)
-  if (detectAIGenerated(text)) {
-    warnings.push({
-      type: "ai_generated",
-      message: "This content appears to be AI-generated. Consider adding your personal touch.",
-      severity: "low",
-    })
-  }
-
-  return warnings
-}
-
-export function calculateXPPreview(text: string, tags: string[]): number {
-  let xp = 0
-
-  // Base XP for content length
-  const wordCount = text.trim().split(/\s+/).length
-  xp += Math.min(wordCount * 2, 100) // Max 100 XP for content
-
-  // Tag bonus
-  xp += tags.length * 10
-
-  // Quality bonus
-  const validation = validateTextContent(text)
-  if (validation.score > 80) xp += 20
-
-  return xp
-}
-
-// Helper functions
-function isOnlyEmojisOrPunctuation(text: string): boolean {
-  const emojiRegex =
-    /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu
-  const punctuationRegex = /[^\w\s]/g
-
-  const withoutEmojis = text.replace(emojiRegex, "")
-  const withoutPunctuation = withoutEmojis.replace(punctuationRegex, "")
-
-  return withoutPunctuation.trim().length === 0
-}
-
-function hasExcessiveDuplicateChars(text: string): boolean {
-  const regex = new RegExp(`(.)\\1{${VALIDATION_LIMITS.MAX_DUPLICATE_CHARS},}`, "g")
-  return regex.test(text)
-}
-
-function hasEmojiSpam(text: string): boolean {
-  const lines = text.split("\n")
-  const emojiRegex =
-    /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu
-
-  return lines.some((line) => {
-    const emojiCount = (line.match(emojiRegex) || []).length
-    return emojiCount > VALIDATION_LIMITS.MAX_EMOJI_PER_LINE
-  })
-}
-
-function detectAIGenerated(text: string): boolean {
-  // Simple heuristics for AI-generated content
-  const aiPatterns = [/as an ai/i, /i'm an ai/i, /as a language model/i, /i don't have personal/i, /i cannot provide/i]
-
-  const repetitivePatterns = [
-    /\b(\w+)\s+\1\b/g, // Repeated words
-    /(.{10,})\1/g, // Repeated phrases
-  ]
-
-  // Check for AI patterns
-  if (aiPatterns.some((pattern) => pattern.test(text))) {
-    return true
-  }
-
-  // Check for repetitive patterns
-  return repetitivePatterns.some((pattern) => pattern.test(text))
-}
-
-// Auto-suggest tags based on content
-export function suggestTags(content: string): string[] {
-  const suggestions: string[] = []
-  const lowerContent = content.toLowerCase()
-
-  // Common tag mappings
-  const tagMappings = {
-    poem: ["poetry", "verse"],
-    quote: ["wisdom", "inspiration"],
-    story: ["narrative", "tale"],
-    thought: ["reflection", "mindful"],
-    dream: ["vision", "aspiration"],
-    love: ["romance", "heart"],
-    life: ["living", "existence"],
-    hope: ["optimism", "faith"],
-    fear: ["anxiety", "worry"],
-    joy: ["happiness", "bliss"],
-  }
-
-  // Check for keywords and suggest related tags
-  Object.entries(tagMappings).forEach(([keyword, tags]) => {
-    if (lowerContent.includes(keyword)) {
-      suggestions.push(...tags)
-    }
-  })
-
-  // Remove duplicates and limit
-  return [...new Set(suggestions)].slice(0, 5)
+  // --- Return result ---
+  return { errors, warnings, nudges, detectedType: type }
 }

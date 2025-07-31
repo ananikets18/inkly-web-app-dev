@@ -7,6 +7,7 @@ import { FeedProvider } from "../hooks/feed-context";
 import ClientRoot from "../components/ClientRoot";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Inkly - A Place",
@@ -25,21 +26,23 @@ export default function RootLayout({
         <meta name="theme-color" content="#9333ea" />
       </head>
       <body className={GeistSans.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ClientRoot>
-            <FeedProvider>
-              <TooltipProvider>
-                {/*
-                  For best UX, keep transitions and animations local to each page/component.
-                  If you want to reintroduce subtle, non-blocking transitions globally, wrap children in a lightweight transition component here.
-                  Example: <motion.div>{children}</motion.div> with a very short fade, but avoid blocking navigation or double-animating.
-                */}
-                {children}
-                <Toaster />
-              </TooltipProvider>
-            </FeedProvider>
-          </ClientRoot>
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <ClientRoot>
+              <FeedProvider>
+                <TooltipProvider>
+                  {/*
+                    For best UX, keep transitions and animations local to each page/component.
+                    If you want to reintroduce subtle, non-blocking transitions globally, wrap children in a lightweight transition component here.
+                    Example: <motion.div>{children}</motion.div> with a very short fade, but avoid blocking navigation or double-animating.
+                  */}
+                  {children}
+                  <Toaster />
+                </TooltipProvider>
+              </FeedProvider>
+            </ClientRoot>
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

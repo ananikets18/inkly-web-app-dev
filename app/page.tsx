@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, RefreshCw } from "lucide-react";
 import Header from "../components/Header";
 import SideNav from "../components/SideNav";
 import BottomNav from "../components/BottomNav";
@@ -18,6 +20,8 @@ import PerformanceMonitor from "../components/PerformanceMonitor";
 import { generateRandomInkId } from "@/utils/random-ink-id";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Flame } from "lucide-react";
+import { NetworkWarning } from "@/components/NetworkWarning";
+import OnboardingGuard from "@/components/OnboardingGuard";
 
 // app/page.tsx
 // Main feed page. Renders list of inks and passes echo users to InkDetails.
@@ -31,17 +35,50 @@ const masonryBreakpoints = {
   768: 1,         // <768px (mobile only)
 };
 
-const INITIAL_COUNT = 8;
-const CARD_LIMIT = 80; // Restored to original value
+const INITIAL_COUNT = 4; // Reduced from 8 to 4
+const CARD_LIMIT = 40; // Reduced from 80 to 40
 
 // Debounce timing for scroll handler
-const SCROLL_DEBOUNCE_MS = 100;
+const SCROLL_DEBOUNCE_MS = 200; // Increased from 100 to 200ms
 
 // --- Echo Logic for Feed ---
 // Each ink card can have an array of echo users (echoUsers) representing users who have echoed it
 // This should come from backend in real app, but is mocked here
 // When navigating to InkDetails, pass echoUsers as initialEchoUsers prop
 // Example: <InkDetails ink={ink} initialEchoUsers={ink.echoUsers} />
+
+// Error State Component for Home Feed
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950 dark:via-background dark:to-red-950">
+      <div className="text-center max-w-md mx-auto px-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="mx-auto mb-6 w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center"
+        >
+          <Home className="w-8 h-8 text-red-600 dark:text-red-400" />
+        </motion.div>
+        
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          Feed Unavailable
+        </h2>
+        
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {error}
+        </p>
+        
+        <button
+          onClick={onRetry}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function HomePage() {
   const { scrollY, setScrollY, hasVisited, setHasVisited } = useFeedContext();
@@ -51,16 +88,42 @@ export default function HomePage() {
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false);
   const [activeTab, setActiveTab] = useState("for-you");
   const [streak, setStreak] = useState<{ count: number; lastDate: string } | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showStreakNudge, setShowStreakNudge] = useState(false);
 
-  // Use optimized loading hook with original settings
+  // Use optimized loading hook with memory-optimized settings
   const { visibleCount, isLoadingMore, checkAndLoadMore } = useOptimizedLoading({
-    batchSize: 4,        // Restored to original batch size
-    batchDelay: 50,      // Restored to original delay
+    batchSize: 2,        // Reduced for memory optimization
+    batchDelay: 100,     // Increased for better performance
     maxItems: CARD_LIMIT,
-    threshold: 300       // Restored to original threshold
+    threshold: 500       // Increased for better performance
   });
 
+  const { playSound } = useSoundEffects();
+
+  // --- Nudge logic ---
   useEffect(() => {
+    if (!streak) {
+      setShowStreakNudge(false);
+      return;
+    }
+    const today = new Date();
+    const lastDate = new Date(streak.lastDate);
+    const diffDays = Math.floor((today.setHours(0,0,0,0) - lastDate.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+    if (streak.count >= 2 && diffDays === 1) {
+      setShowStreakNudge(true);
+    } else {
+      setShowStreakNudge(false);
+    }
+  }, [streak]);
+
+  useEffect(() => {
+    // Simulate initial loading time for better UX
+    const loadingTimer = setTimeout(() => {
+      setIsInitialLoading(false)
+    }, 2000)
+
     window.scrollTo(0, scrollY);
     setMounted(true);
     if (!hasVisited) setHasVisited(true);
@@ -83,52 +146,23 @@ export default function HomePage() {
     
     return () => {
       setScrollY(window.scrollY);
+      clearTimeout(loadingTimer);
     };
-  }, [mounted]);
+  }, []); // Removed [mounted] dependency to prevent infinite loop
 
-  // --- DEV ONLY: Force streak banner/nudge to show for testing ---
-  // useEffect(() => {
-  //   setStreak({ count: 4, lastDate: (() => {
-  //     // Set lastDate to yesterday to trigger the nudge
-  //     const d = new Date();
-  //     d.setDate(d.getDate() - 1);
-  //     return d.toISOString().slice(0, 10);
-  //   })() });
-  // }, []);
+  const handleRetry = () => {
+    setError(null)
+    setIsInitialLoading(true)
+    setTimeout(() => setIsInitialLoading(false), 2000)
+  }
 
-  // --- Nudge logic ---
-  const [showStreakNudge, setShowStreakNudge] = useState(false);
-  useEffect(() => {
-    if (!streak) return;
-    const today = new Date();
-    const lastDate = new Date(streak.lastDate);
-    const diffDays = Math.floor((today.setHours(0,0,0,0) - lastDate.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
-    if (streak.count >= 2 && diffDays === 1) {
-      setShowStreakNudge(true);
-    } else {
-      setShowStreakNudge(false);
-    }
-  }, [streak]);
+  // Show error state if there's an error
+  if (error) {
+    return <ErrorState error={error} onRetry={handleRetry} />
+  }
 
-  const { playSound } = useSoundEffects();
-
-  // Memoize static data to prevent re-creation on every render
+  // Memoize static data to prevent re-creation on every render (reduced for memory optimization)
   const sampleContents = useMemo(() => [
-    // Large Poem Demo
-    `Beneath the silver whisper of the moon,
-A thousand dreams awaken, drift, and swoon.
-The city sleeps, but in the quiet deep,
-A poet's heart is far too wild to sleep.
-
-She pens the ache of longing in the night,
-Each stanza trembling, searching for the light.
-Her verses spill like rivers on the page—
-A gentle storm, a captive bird uncaged.
-
-The world may never know the words she weaves,
-The secret hopes she tucks beneath her sleeves.
-But in the hush, her ink becomes the sea—
-Endless, wild, and beautifully free.`,
     // Poems
     "The moonlight danced on the edges of her soul, illuminating corners even she had forgotten.",
     "Hope was not a bird, but a fire quietly kept alive beneath her ribs.",
@@ -141,9 +175,6 @@ Endless, wild, and beautifully free.`,
     // Affirmations
     "A silent affirmation each morning shaped her every decision.",
     "Manifest with intention. Trust the magic in your breath.",
-    // Dank tales
-    "Once upon a meme, a frog ruled the internet.",
-    "In a world of cats, be a keyboard warrior.",
     // Confessions
     "Confession: I still believe in magic.",
     "Sometimes I pretend to be busy just to avoid people.",
@@ -164,11 +195,6 @@ Endless, wild, and beautifully free.`,
     "Sam Taylor",       // Regular user
     "emma_wilson",      // Contributor badge
     "Riley Park",       // Regular user
-    "david_chen",       // Writer badge
-    "Alex Rivera",      // Regular user
-    "lisa_park",        // Author badge
-    "jessica_brown",    // Verified tick only
-    "michael_lee"       // Verified tick only
   ], []);
 
   const avatarColors = useMemo(() => [
@@ -284,7 +310,7 @@ Endless, wild, and beautifully free.`,
           />
         );
       });
-  }, [mounted, visibleCount, sampleContents, authorNames, avatarColors, postReactions, handleButtonHover, handleReaction, handleButtonClick, inkIds, calculateReadingTime]);
+  }, [mounted, visibleCount, sampleContents, authorNames, avatarColors, postReactions, handleButtonHover, handleReaction, handleButtonClick, inkIds]); // Removed calculateReadingTime as it's a stable imported function
 
   // Memoize skeleton cards
   const skeletonCards = useMemo(() => 
@@ -329,7 +355,7 @@ Endless, wild, and beautifully free.`,
     // Also call after a short delay in case layout shifts
     const timeout = setTimeout(fillViewportIfNeeded, 200);
     return () => clearTimeout(timeout);
-  }, [visibleCount, isLoadingMore, checkAndLoadMore]);
+  }, [visibleCount, isLoadingMore]); // Removed checkAndLoadMore from dependencies to prevent infinite loop
 
   // Accessibility: ARIA live region for new content
   const [ariaMessage, setAriaMessage] = useState("");
@@ -342,125 +368,172 @@ Endless, wild, and beautifully free.`,
   }, [isLoadingMore, visibleCount]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex sm:flex-row flex-col">
-        <SideNav />
-        <main className="flex-1 sm:px-2 sm:px-4 py-3" role="main">
-          {/* ARIA live region for accessibility */}
-          <div aria-live="polite" className="sr-only">{ariaMessage}</div>
-          {isLoading && <FeedLoader message="Loading feed..." />}
-
-          {/* --- STREAK NUDGE --- */}
-          {showStreakNudge && streak && (
-            <div
-              className="flex flex-col sm:flex-row items-center gap-2 mb-4 px-4 py-2 rounded-lg border shadow transition-colors
-                bg-gradient-to-r from-yellow-100 to-orange-200 border-yellow-300 text-yellow-900
-                dark:from-yellow-900 dark:to-orange-900 dark:border-yellow-700 dark:text-yellow-100"
-              role="status"
-              aria-label={`Don't lose your ${streak.count}-day streak! Ink something today to keep it alive!`}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <Flame className="w-5 h-5 text-orange-500 mr-1 animate-bounce" aria-hidden="true" />
-                <span className="font-semibold text-sm md:text-base flex-1">
-                  Don’t lose your <span className="sr-only">streak: </span>{streak.count}-day streak! Ink something today to keep it alive! <b aria-hidden="true">🔥</b>
-                </span>
-                <a
-                  href="/create"
-                  className="ml-2 px-3 py-1 rounded-md bg-orange-500 text-white font-semibold text-sm shadow hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 transition-colors dark:bg-orange-600 dark:hover:bg-orange-500 dark:focus:ring-orange-300"
-                  tabIndex={0}
-                  aria-label="Start Writing"
-                >
-                  Start Writing
-                </a>
-              </div>
+    <OnboardingGuard>
+      <>
+        {/* Initial Loading State - Full Screen */}
+        {isInitialLoading && (
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-orange-50 dark:from-purple-950 dark:via-background dark:to-orange-950 flex items-center justify-center">
+            <div className="text-center">
+              <motion.div
+                animate={{ 
+                  rotate: 360,
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                  scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                }}
+                className="mx-auto mb-6 w-20 h-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full flex items-center justify-center shadow-xl"
+              >
+                <Home className="w-10 h-10 text-white" />
+              </motion.div>
+              <motion.h2
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl font-bold text-gray-800 dark:text-white mb-2"
+              >
+                Loading Your Feed
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-gray-600 dark:text-gray-400"
+              >
+                Curating the best stories for you...
+              </motion.p>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* --- STREAK BANNER --- */}
-          {streak && streak.count >= 2 && !showStreakNudge && (
-            <section
-              className="flex flex-col sm:flex-row items-center gap-3 mb-4 px-4 py-2 rounded-lg border shadow transition-colors
-                bg-gradient-to-r from-orange-200 via-yellow-100 to-orange-100 border-orange-300 text-orange-800
-                dark:from-orange-900 dark:via-yellow-900 dark:to-orange-900 dark:border-orange-700 dark:text-orange-100"
-              role="status"
-              aria-label={`You are on a ${streak.count}-day writing streak!`}
-            >
-              <span className="animate-pulse"><Flame className="w-6 h-6 text-orange-500" aria-hidden="true" /></span>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1">
-                  <span className="font-semibold text-base sm:text-lg">
-                    {streak.count >= 5 ? (
-                      <>
-                        <span className="sr-only">Streak Master: </span>🔥 <b>Streak Master!</b> {streak.count} days in a row!
-                      </>
-                    ) : (
-                      <>
-                        <span className="sr-only">Streak: </span>🔥 {streak.count} day streak! Keep it going!
-                      </>
-                    )}
+        {/* Main App Layout - Only show when not in initial loading state */}
+        {!isInitialLoading && (
+          <div className="min-h-screen bg-background">
+            <Header />
+            <div className="flex sm:flex-row flex-col">
+              <SideNav />
+              <main className="flex-1 sm:px-2 sm:px-4 py-3" role="main">
+                {/* ARIA live region for accessibility */}
+                <div aria-live="polite" className="sr-only">{ariaMessage}</div>
+                
+                {/* Network Warning */}
+                <NetworkWarning variant="banner" />
+                
+                {isLoading && <FeedLoader message="Loading feed..." />}
+
+                {/* --- STREAK NUDGE --- */}
+                {showStreakNudge && streak && (
+              <div
+                className="flex flex-col sm:flex-row items-center gap-2 mb-4 px-4 py-2 rounded-lg border shadow transition-colors
+                  bg-gradient-to-r from-yellow-100 to-orange-200 border-yellow-300 text-yellow-900
+                  dark:from-yellow-900 dark:to-orange-900 dark:border-yellow-700 dark:text-yellow-100"
+                role="status"
+                aria-label={`Don't lose your ${streak.count}-day streak! Ink something today to keep it alive!`}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Flame className="w-5 h-5 text-orange-500 mr-1 animate-bounce" aria-hidden="true" />
+                  <span className="font-semibold text-sm md:text-base flex-1">
+                    Don't lose your <span className="sr-only">streak: </span>{streak.count}-day streak! Ink something today to keep it alive! <b aria-hidden="true">🔥</b>
                   </span>
-                  <span className="ml-2 text-xs sm:text-sm text-orange-700 dark:text-orange-200">
-                    {streak.count < 5
-                      ? `Only ${5 - streak.count} more day${5 - streak.count > 1 ? "s" : ""} to unlock the Streak Master badge!`
-                      : "You've unlocked the Streak Master badge!"}
-                  </span>
-                </div>
-                <div className="w-full bg-orange-100 dark:bg-orange-950 rounded-full h-1 mt-2" aria-hidden="true">
-                  <div
-                    className="bg-orange-400 dark:bg-orange-500 h-1 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((streak.count / 5) * 100, 100)}%` }}
-                  />
+                  <a
+                    href="/create"
+                    className="ml-2 px-3 py-1 rounded-md bg-orange-500 text-white font-semibold text-sm shadow hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 transition-colors dark:bg-orange-600 dark:hover:bg-orange-500 dark:focus:ring-orange-300"
+                    tabIndex={0}
+                    aria-label="Start Writing"
+                  >
+                    Start Writing
+                  </a>
                 </div>
               </div>
-            </section>
-          )}
+            )}
 
-          {/* Removed Tabs, TabsList, TabsTrigger, TabsContent */}
-          {!mounted ? (
-            <Masonry
-              breakpointCols={masonryBreakpoints}
-              className="my-masonry-grid"
-              columnClassName="my-masonry-grid_column"
-            >
-              {skeletonCards}
-            </Masonry>
-          ) : (
-            <Masonry
-              breakpointCols={masonryBreakpoints}
-              className="my-masonry-grid"
-              columnClassName="my-masonry-grid_column"
-            >
-              {cards}
-              {isLoadingMore && (
-                <>
-                  <div className="flex flex-col items-center justify-center py-6 w-full col-span-full">
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500 mb-2" />
-                    <span className="text-sm text-gray-500 font-medium">Loading more...</span>
+            {/* --- STREAK BANNER --- */}
+            {streak && streak.count >= 2 && !showStreakNudge && (
+              <section
+                className="flex flex-col sm:flex-row items-center gap-3 mb-4 px-4 py-2 rounded-lg border shadow transition-colors
+                  bg-gradient-to-r from-orange-200 via-yellow-100 to-orange-100 border-orange-300 text-orange-800
+                  dark:from-orange-900 dark:via-yellow-900 dark:to-orange-900 dark:border-orange-700 dark:text-orange-100"
+                role="status"
+                aria-label={`You are on a ${streak.count}-day writing streak!`}
+              >
+                <span className="animate-pulse"><Flame className="w-6 h-6 text-orange-500" aria-hidden="true" /></span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1">
+                    <span className="font-semibold text-base sm:text-lg">
+                      {streak.count >= 5 ? (
+                        <>
+                          <span className="sr-only">Streak Master: </span>🔥 <b>Streak Master!</b> {streak.count} days in a row!
+                        </>
+                      ) : (
+                        <>
+                          <span className="sr-only">Streak: </span>🔥 {streak.count} day streak! Keep it going!
+                        </>
+                      )}
+                    </span>
+                    <span className="ml-2 text-xs sm:text-sm text-orange-700 dark:text-orange-200">
+                      {streak.count < 5
+                        ? `Only ${5 - streak.count} more day${5 - streak.count > 1 ? "s" : ""} to unlock the Streak Master badge!`
+                        : "You've unlocked the Streak Master badge!"}
+                    </span>
                   </div>
-                  {loadingMoreSkeletons}
-                </>
-              )}
-              {/* Accessible Load More button for keyboard/screen reader users */}
-              {visibleCount < CARD_LIMIT && !isLoadingMore && (
-                <button
-                  className="sr-only"
-                  tabIndex={0}
-                  aria-label="Load more content"
-                  onClick={() => checkAndLoadMore()}
-                >
-                  Load more
-                </button>
-              )}
-            </Masonry>
-          )}
-        </main>
-      </div>
-      <BottomNav />
-      <PerformanceMonitor 
-        cardCount={cards.length} 
-        isVisible={showPerformanceMonitor} 
-      />
-    </div>
+                  <div className="w-full bg-orange-100 dark:bg-orange-950 rounded-full h-1 mt-2" aria-hidden="true">
+                    <div
+                      className="bg-orange-400 dark:bg-orange-500 h-1 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min((streak.count / 5) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Removed Tabs, TabsList, TabsTrigger, TabsContent */}
+            {!mounted ? (
+              <Masonry
+                breakpointCols={masonryBreakpoints}
+                className="my-masonry-grid"
+                columnClassName="my-masonry-grid_column"
+              >
+                {skeletonCards}
+              </Masonry>
+            ) : (
+              <Masonry
+                breakpointCols={masonryBreakpoints}
+                className="my-masonry-grid"
+                columnClassName="my-masonry-grid_column"
+              >
+                {cards}
+                {isLoadingMore && (
+                  <>
+                    <div className="flex flex-col items-center justify-center py-6 w-full col-span-full">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-500 mb-2" />
+                      <span className="text-sm text-gray-500 font-medium">Loading more...</span>
+                    </div>
+                    {loadingMoreSkeletons}
+                  </>
+                )}
+                {/* Accessible Load More button for keyboard/screen reader users */}
+                {visibleCount < CARD_LIMIT && !isLoadingMore && (
+                  <button
+                    className="sr-only"
+                    tabIndex={0}
+                    aria-label="Load more content"
+                    onClick={() => checkAndLoadMore()}
+                  >
+                    Load more
+                  </button>
+                )}
+              </Masonry>
+            )}
+              </main>
+            </div>
+            <BottomNav />
+            <PerformanceMonitor 
+              cardCount={cards.length} 
+              isVisible={showPerformanceMonitor} 
+            />
+          </div>
+        )}
+      </>
+    </OnboardingGuard>
   );
 }

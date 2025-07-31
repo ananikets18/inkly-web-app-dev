@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -55,7 +55,7 @@ export default function DraftsQueue() {
     },
   ])
 
-  const handleDeleteDraft = (draftId: string) => {
+  const handleDeleteDraft = useCallback((draftId: string) => {
     const draft = drafts.find((d) => d.id === draftId)
     if (!draft) return
 
@@ -71,9 +71,9 @@ export default function DraftsQueue() {
         })
       },
     })
-  }
+  }, [drafts, openModal, toast])
 
-  const handleEditDraft = (draftId: string) => {
+  const handleEditDraft = useCallback((draftId: string) => {
     const draft = drafts.find((d) => d.id === draftId)
     if (!draft) return
 
@@ -100,9 +100,9 @@ export default function DraftsQueue() {
         })
       },
     })
-  }
+  }, [drafts, openModal, toast])
 
-  const handlePreviewDraft = (draftId: string) => {
+  const handlePreviewDraft = useCallback((draftId: string) => {
     const draft = drafts.find((d) => d.id === draftId)
     if (!draft) return
 
@@ -111,9 +111,9 @@ export default function DraftsQueue() {
       content: draft.content,
       wordCount: draft.wordCount,
     })
-  }
+  }, [drafts, openModal])
 
-  const handlePublishDraft = (draftId: string) => {
+  const handlePublishDraft = useCallback((draftId: string) => {
     const draft = drafts.find((d) => d.id === draftId)
     if (!draft) return
 
@@ -127,12 +127,17 @@ export default function DraftsQueue() {
         })
       },
     })
-  }
+  }, [drafts, openModal, toast])
 
-  const CompactDraftCard = ({ draft }: { draft: (typeof drafts)[0] }) => {
+  // Memoized CompactDraftCard component to prevent unnecessary re-renders
+  const CompactDraftCard = useCallback(({ draft }: { draft: (typeof drafts)[0] }) => {
     const [isHovered, setIsHovered] = useState(false)
-    const displayContent = truncate(draft.content, 280)
-    const timeAgo = formatTimeAgo(draft.lastModified)
+    const displayContent = useMemo(() => truncate(draft.content, 280), [draft.content])
+    const timeAgo = useMemo(() => formatTimeAgo(draft.lastModified), [draft.lastModified])
+
+    const handleMouseEnter = useCallback(() => setIsHovered(true), [])
+    const handleMouseLeave = useCallback(() => setIsHovered(false), [])
+    const handleClick = useCallback(() => handlePreviewDraft(draft.id), [draft.id])
 
     return (
       <motion.div
@@ -142,9 +147,9 @@ export default function DraftsQueue() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -1 }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={() => handlePreviewDraft(draft.id)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
         <div className="absolute top-4 right-4 z-10">
           <div className="bg-amber-500 dark:bg-amber-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
@@ -250,12 +255,17 @@ export default function DraftsQueue() {
         </div>
       </motion.div>
     )
-  }
+  }, [handlePreviewDraft, handleEditDraft, handlePublishDraft, handleDeleteDraft])
 
-  const GridDraftCard = ({ draft }: { draft: (typeof drafts)[0] }) => {
+  // Memoized GridDraftCard component to prevent unnecessary re-renders
+  const GridDraftCard = useCallback(({ draft }: { draft: (typeof drafts)[0] }) => {
     const [isHovered, setIsHovered] = useState(false)
-    const displayContent = truncate(draft.content, 200)
-    const timeAgo = formatTimeAgo(draft.lastModified)
+    const displayContent = useMemo(() => truncate(draft.content, 200), [draft.content])
+    const timeAgo = useMemo(() => formatTimeAgo(draft.lastModified), [draft.lastModified])
+
+    const handleMouseEnter = useCallback(() => setIsHovered(true), [])
+    const handleMouseLeave = useCallback(() => setIsHovered(false), [])
+    const handleClick = useCallback(() => handlePreviewDraft(draft.id), [draft.id])
 
     return (
       <motion.div
@@ -265,9 +275,9 @@ export default function DraftsQueue() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -2 }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={() => handlePreviewDraft(draft.id)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
         <div className="absolute top-4 right-4 z-10">
           <div className="bg-amber-500 dark:bg-amber-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">
@@ -378,7 +388,14 @@ export default function DraftsQueue() {
         </div>
       </motion.div>
     )
-  }
+  }, [handlePreviewDraft, handleEditDraft, handlePublishDraft, handleDeleteDraft])
+
+  // Memoized stats calculations
+  const stats = useMemo(() => ({
+    totalWords: drafts.reduce((acc, draft) => acc + draft.wordCount, 0),
+    readyToPublish: drafts.filter((d) => d.wordCount > 300).length,
+    avgLength: Math.round(drafts.reduce((acc, draft) => acc + draft.wordCount, 0) / drafts.length)
+  }), [drafts])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300">
@@ -391,7 +408,7 @@ export default function DraftsQueue() {
                 Drafts
               </h1>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-medium">
-                {drafts.length} drafts • {drafts.reduce((acc, draft) => acc + draft.wordCount, 0).toLocaleString()}{" "}
+                {drafts.length} drafts • {stats.totalWords.toLocaleString()}{" "}
                 total words
               </p>
             </div>
@@ -453,7 +470,7 @@ export default function DraftsQueue() {
                     <div>
                       <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Total Words</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {drafts.reduce((acc, draft) => acc + draft.wordCount, 0).toLocaleString()}
+                        {stats.totalWords.toLocaleString()}
                       </p>
                     </div>
                     <div className="p-3 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
@@ -471,7 +488,7 @@ export default function DraftsQueue() {
                     <div>
                       <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Avg. Length</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {Math.round(drafts.reduce((acc, draft) => acc + draft.wordCount, 0) / drafts.length)}
+                        {stats.avgLength}
                       </p>
                     </div>
                     <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
@@ -489,7 +506,7 @@ export default function DraftsQueue() {
                     <div>
                       <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Ready to Publish</p>
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        {drafts.filter((d) => d.wordCount > 300).length}
+                        {stats.readyToPublish}
                       </p>
                     </div>
                     <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
